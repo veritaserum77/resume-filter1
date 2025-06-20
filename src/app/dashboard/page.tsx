@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent } from 'react';
 import type { Candidate, SkillParameter } from '@/lib/types';
 import { mockCandidates } from '@/lib/mockData';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>(mockCandidates);
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [gdriveLink, setGdriveLink] = useState('');
   const [overallScoreFilter, setOverallScoreFilter] = useState<number | ''>('');
   const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -162,14 +163,29 @@ export default function DashboardPage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-headline"><UploadCloud className="h-5 w-5 text-primary" /> Resume Upload</CardTitle>
-              <CardDescription>Upload up to 500 resumes (PDF/DOCX). Placeholder UI.</CardDescription>
+              <CardDescription>Upload resumes (PDF/DOCX) or provide a Google Drive link.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-md aspect-video bg-muted/20 hover:border-primary transition-colors cursor-pointer">
                 <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">Drag & drop files here or click to browse</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Max 500 files. PDF, DOCX supported.</p>
-                <Input type="file" className="sr-only" disabled />
+                <Input type="file" className="sr-only" multiple disabled />
+              </div>
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="gdriveLink" className="text-sm font-medium">Or paste Google Drive Link</Label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="gdriveLink"
+                    type="url"
+                    placeholder="https://drive.google.com/..."
+                    value={gdriveLink}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setGdriveLink(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground/70 mt-1">Link to a folder or individual resume files.</p>
               </div>
             </CardContent>
           </Card>
