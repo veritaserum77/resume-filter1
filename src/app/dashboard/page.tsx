@@ -158,203 +158,203 @@ export default function DashboardPage() {
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><UploadCloud className="h-5 w-5 text-primary" /> Resume Upload</CardTitle>
-                <CardDescription>Upload up to 500 resumes (PDF/DOCX). Placeholder UI.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-md aspect-video bg-muted/20 hover:border-primary transition-colors cursor-pointer">
-                  <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Drag & drop files here or click to browse</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Max 500 files. PDF, DOCX supported.</p>
-                  <Input type="file" className="sr-only" disabled />
-                </div>
-              </CardContent>
-            </Card>
+          {/* Resume Upload Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline"><UploadCloud className="h-5 w-5 text-primary" /> Resume Upload</CardTitle>
+              <CardDescription>Upload up to 500 resumes (PDF/DOCX). Placeholder UI.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-md aspect-video bg-muted/20 hover:border-primary transition-colors cursor-pointer">
+                <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Drag & drop files here or click to browse</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Max 500 files. PDF, DOCX supported.</p>
+                <Input type="file" className="sr-only" disabled />
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><FileText className="h-5 w-5 text-primary" /> Job Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Paste job description here..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  className="min-h-[150px] resize-y"
+          {/* Job Description Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline"><FileText className="h-5 w-5 text-primary" /> Job Description</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Paste job description here..."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="min-h-[150px] resize-y"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Custom Parameters Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline"><PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters</CardTitle>
+              <CardDescription>Define skills and their importance (1-10). Confirm to apply changes.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {parameters.map((param) => (
+                <div key={param.id} className="flex items-center gap-2 p-2 border rounded-md bg-secondary/30">
+                  <span className="flex-1 font-medium">{param.name}</span>
+                  <span className="text-sm text-muted-foreground">Weight: {param.weight}</span>
+                  <Button variant="ghost" size="icon" onClick={() => handleRemoveParameter(param.id)} aria-label={`Remove ${param.name}`}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              <div className="space-y-3 pt-4 border-t">
+                <Input
+                  type="text"
+                  placeholder="New Skill Name (e.g., JavaScript)"
+                  value={newParamName}
+                  onChange={(e) => setNewParamName(e.target.value)}
                 />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters</CardTitle>
-                <CardDescription>Define skills and their importance (1-10). Confirm to apply changes.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {parameters.map((param) => (
-                  <div key={param.id} className="flex items-center gap-2 p-2 border rounded-md bg-secondary/30">
-                    <span className="flex-1 font-medium">{param.name}</span>
-                    <span className="text-sm text-muted-foreground">Weight: {param.weight}</span>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveParameter(param.id)} aria-label={`Remove ${param.name}`}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-                <div className="space-y-3 pt-4 border-t">
-                  <Input
-                    type="text"
-                    placeholder="New Skill Name (e.g., JavaScript)"
-                    value={newParamName}
-                    onChange={(e) => setNewParamName(e.target.value)}
+                <div className="space-y-1">
+                  <Label htmlFor="newParamWeight" className="text-xs">Weight: {newParamWeight}</Label>
+                  <Slider
+                    id="newParamWeight"
+                    min={1} max={10} step={1}
+                    value={[newParamWeight]}
+                    onValueChange={(value) => setNewParamWeight(value[0])}
                   />
-                  <div className="space-y-1">
-                    <Label htmlFor="newParamWeight" className="text-xs">Weight: {newParamWeight}</Label>
-                    <Slider
-                      id="newParamWeight"
-                      min={1} max={10} step={1}
-                      value={[newParamWeight]}
-                      onValueChange={(value) => setNewParamWeight(value[0])}
-                    />
-                  </div>
-                  <Button onClick={handleAddParameter} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Skill to Staging
-                  </Button>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleConfirmSkillChanges} className="w-full">
-                  <CheckCircle className="mr-2 h-4 w-4" /> Confirm Skill Configuration
+                <Button onClick={handleAddParameter} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Skill to Staging
                 </Button>
-              </CardFooter>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleConfirmSkillChanges} className="w-full">
+                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Skill Configuration
+              </Button>
+            </CardFooter>
+          </Card>
 
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
-                <div className="flex-shrink-0">
-                  <CardTitle className="flex items-center gap-2 font-headline">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary"><path d="M16.5 12A2.5 2.5 0 0019 9.5A2.5 2.5 0 0016.5 7A2.5 2.5 0 0014 9.5A2.5 2.5 0 0016.5 12M9 11.5A2.5 2.5 0 0011.5 9A2.5 2.5 0 009 6.5A2.5 2.5 0 006.5 9A2.5 2.5 0 009 11.5M16.5 14A2.5 2.5 0 0014 16.5A2.5 2.5 0 0016.5 19A2.5 2.5 0 0019 16.5A2.5 2.5 0 0016.5 14M9 13.5A2.5 2.5 0 006.5 16A2.5 2.5 0 009 18.5A2.5 2.5 0 0011.5 16A2.5 2.5 0 009 13.5Z"></path></svg>
-                     Candidate Scores
-                  </CardTitle>
-                  <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
+          {/* Candidate Scores Card */}
+          <Card className="shadow-lg lg:col-span-3">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+              <div className="flex-shrink-0">
+                <CardTitle className="flex items-center gap-2 font-headline">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary"><path d="M16.5 12A2.5 2.5 0 0019 9.5A2.5 2.5 0 0016.5 7A2.5 2.5 0 0014 9.5A2.5 2.5 0 0016.5 12M9 11.5A2.5 2.5 0 0011.5 9A2.5 2.5 0 009 6.5A2.5 2.5 0 006.5 9A2.5 2.5 0 009 11.5M16.5 14A2.5 2.5 0 0014 16.5A2.5 2.5 0 0016.5 19A2.5 2.5 0 0019 16.5A2.5 2.5 0 0016.5 14M9 13.5A2.5 2.5 0 006.5 16A2.5 2.5 0 009 18.5A2.5 2.5 0 0011.5 16A2.5 2.5 0 009 13.5Z"></path></svg>
+                    Candidate Scores
+                </CardTitle>
+                <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full sm:w-48 md:w-64"
+                  />
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <div className="relative flex-grow sm:flex-grow-0">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full sm:w-48 md:w-64"
-                    />
-                  </div>
-                  <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="flex-shrink-0">
-                        <Filter className="h-4 w-4" />
-                        <span className="sr-only">Open Filters</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 space-y-4" align="end">
-                      <div className="space-y-2">
-                        <h4 className="font-medium leading-none">Filters</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Adjust filters to refine candidate list.
-                        </p>
+                <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="flex-shrink-0">
+                      <Filter className="h-4 w-4" />
+                      <span className="sr-only">Open Filters</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 space-y-4" align="end">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none">Filters</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Adjust filters to refine candidate list.
+                      </p>
+                    </div>
+                    <div className="grid gap-4">
+                      <div>
+                        <Label htmlFor="overallScoreFilterPopover">Min. Overall Score (%)</Label>
+                        <Input
+                          id="overallScoreFilterPopover"
+                          type="number"
+                          min="0" max="100"
+                          placeholder="e.g., 80"
+                          value={overallScoreFilter}
+                          onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                        />
                       </div>
-                      <div className="grid gap-4">
-                        <div>
-                          <Label htmlFor="overallScoreFilterPopover">Min. Overall Score (%)</Label>
-                          <Input
-                            id="overallScoreFilterPopover"
-                            type="number"
-                            min="0" max="100"
-                            placeholder="e.g., 80"
-                            value={overallScoreFilter}
-                            onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                          />
-                        </div>
-                        {skillFilters.length > 0 && (
-                          <div className="space-y-2 pt-2 border-t">
-                            <Label className="font-medium">Min. Skill Scores (Active)</Label>
-                            <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
-                            {skillFilters.map((filter, index) => (
-                              <div key={filter.skillName}>
-                                <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
-                                <Input
-                                  id={`skillFilterPopover-${filter.skillName}`}
-                                  type="number"
-                                  min="0" max="10"
-                                  placeholder="e.g., 7"
-                                  value={filter.minScore}
-                                  onChange={(e) => {
-                                    const newFilters = [...skillFilters];
-                                    newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
-                                    setSkillFilters(newFilters);
-                                  }}
-                                />
-                              </div>
-                            ))}
+                      {skillFilters.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <Label className="font-medium">Min. Skill Scores (Active)</Label>
+                          <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
+                          {skillFilters.map((filter, index) => (
+                            <div key={filter.skillName}>
+                              <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
+                              <Input
+                                id={`skillFilterPopover-${filter.skillName}`}
+                                type="number"
+                                min="0" max="10"
+                                placeholder="e.g., 7"
+                                value={filter.minScore}
+                                onChange={(e) => {
+                                  const newFilters = [...skillFilters];
+                                  newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
+                                  setSkillFilters(newFilters);
+                                }}
+                              />
                             </div>
+                          ))}
                           </div>
-                        )}
-                      </div>
-                      <Button onClick={() => setIsFilterPopoverOpen(false)} className="w-full">Apply Filters</Button>
-                    </PopoverContent>
-                  </Popover>
-                  <Button onClick={handleExport} variant="outline" size="sm" className="flex-shrink-0">
-                    <Files className="mr-2 h-4 w-4" /> Export
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
-                        <TableHead className="whitespace-nowrap">Phone</TableHead>
-                        <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
-                        {confirmedParameters.map(param => (
-                          <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
-                            {param.name} {getSortIcon(param.name)}
-                          </TableHead>
-                        ))}
-                        <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score {getSortIcon('overallScore')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAndSortedCandidates.length > 0 ? (
-                        filteredAndSortedCandidates.map(candidate => (
-                          <TableRow key={candidate.id} className="hover:bg-muted/20">
-                            <TableCell className="font-medium whitespace-nowrap">{candidate.name}</TableCell>
-                            <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
-                            <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
-                            {confirmedParameters.map(param => (
-                              <TableCell key={`${candidate.id}-${param.id}`} className="text-center">
-                                {candidate.skills[param.name] || 0}/10
-                              </TableCell>
-                            ))}
-                            <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
-                            No candidates match your filters, or no skills confirmed for display.
-                          </TableCell>
-                        </TableRow>
+                        </div>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    </div>
+                    <Button onClick={() => setIsFilterPopoverOpen(false)} className="w-full">Apply Filters</Button>
+                  </PopoverContent>
+                </Popover>
+                <Button onClick={handleExport} variant="outline" size="sm" className="flex-shrink-0">
+                  <Files className="mr-2 h-4 w-4" /> Export
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
+                      <TableHead className="whitespace-nowrap">Phone</TableHead>
+                      <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
+                      {confirmedParameters.map(param => (
+                        <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
+                          {param.name} {getSortIcon(param.name)}
+                        </TableHead>
+                      ))}
+                      <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score {getSortIcon('overallScore')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedCandidates.length > 0 ? (
+                      filteredAndSortedCandidates.map(candidate => (
+                        <TableRow key={candidate.id} className="hover:bg-muted/20">
+                          <TableCell className="font-medium whitespace-nowrap">{candidate.name}</TableCell>
+                          <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
+                          <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
+                          {confirmedParameters.map(param => (
+                            <TableCell key={`${candidate.id}-${param.id}`} className="text-center">
+                              {candidate.skills[param.name] || 0}/10
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
+                          No candidates match your filters, or no skills confirmed for display.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
