@@ -12,9 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [overallScoreFilter, setOverallScoreFilter] = useState<number | ''>('');
   const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -233,71 +234,82 @@ export default function DashboardPage() {
 
           <div className="lg:col-span-2 space-y-6">
             <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><Filter className="h-5 w-5 text-primary" /> Filters & Search</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search by name, email, phone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="overallScoreFilter">Min. Overall Score (%)</Label>
-                    <Input
-                      id="overallScoreFilter"
-                      type="number"
-                      min="0" max="100"
-                      placeholder="e.g., 80"
-                      value={overallScoreFilter}
-                      onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-                {skillFilters.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label className="font-medium">Min. Skill Scores (Active)</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                    {skillFilters.map((filter, index) => (
-                      <div key={filter.skillName}>
-                        <Label htmlFor={`skillFilter-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
-                        <Input
-                          id={`skillFilter-${filter.skillName}`}
-                          type="number"
-                          min="0" max="10"
-                          placeholder="e.g., 7"
-                          value={filter.minScore}
-                          onChange={(e) => {
-                            const newFilters = [...skillFilters];
-                            newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
-                            setSkillFilters(newFilters);
-                          }}
-                        />
-                      </div>
-                    ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+                <div className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 font-headline">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary"><path d="M16.5 12A2.5 2.5 0 0019 9.5A2.5 2.5 0 0016.5 7A2.5 2.5 0 0014 9.5A2.5 2.5 0 0016.5 12M9 11.5A2.5 2.5 0 0011.5 9A2.5 2.5 0 009 6.5A2.5 2.5 0 006.5 9A2.5 2.5 0 009 11.5M16.5 14A2.5 2.5 0 0014 16.5A2.5 2.5 0 0016.5 19A2.5 2.5 0 0019 16.5A2.5 2.5 0 0016.5 14M9 13.5A2.5 2.5 0 006.5 16A2.5 2.5 0 009 18.5A2.5 2.5 0 0011.5 16A2.5 2.5 0 009 13.5Z"></path></svg>
                      Candidate Scores
                   </CardTitle>
                   <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
                 </div>
-                <Button onClick={handleExport} variant="outline" size="sm">
-                  <Files className="mr-2 h-4 w-4" /> Export to CSV
-                </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-grow sm:flex-grow-0">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 w-full sm:w-48 md:w-64"
+                    />
+                  </div>
+                  <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" className="flex-shrink-0">
+                        <Filter className="h-4 w-4" />
+                        <span className="sr-only">Open Filters</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 space-y-4" align="end">
+                      <div className="space-y-2">
+                        <h4 className="font-medium leading-none">Filters</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Adjust filters to refine candidate list.
+                        </p>
+                      </div>
+                      <div className="grid gap-4">
+                        <div>
+                          <Label htmlFor="overallScoreFilterPopover">Min. Overall Score (%)</Label>
+                          <Input
+                            id="overallScoreFilterPopover"
+                            type="number"
+                            min="0" max="100"
+                            placeholder="e.g., 80"
+                            value={overallScoreFilter}
+                            onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                          />
+                        </div>
+                        {skillFilters.length > 0 && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <Label className="font-medium">Min. Skill Scores (Active)</Label>
+                            <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
+                            {skillFilters.map((filter, index) => (
+                              <div key={filter.skillName}>
+                                <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
+                                <Input
+                                  id={`skillFilterPopover-${filter.skillName}`}
+                                  type="number"
+                                  min="0" max="10"
+                                  placeholder="e.g., 7"
+                                  value={filter.minScore}
+                                  onChange={(e) => {
+                                    const newFilters = [...skillFilters];
+                                    newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
+                                    setSkillFilters(newFilters);
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <Button onClick={() => setIsFilterPopoverOpen(false)} className="w-full">Apply Filters</Button>
+                    </PopoverContent>
+                  </Popover>
+                  <Button onClick={handleExport} variant="outline" size="sm" className="flex-shrink-0">
+                    <Files className="mr-2 h-4 w-4" /> Export
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
