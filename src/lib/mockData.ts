@@ -1,0 +1,52 @@
+import type { Candidate } from './types';
+
+export const mockCandidates: Candidate[] = [
+  {
+    id: '1',
+    name: 'Alice Wonderland',
+    phone: '555-0101',
+    email: 'alice.w@example.com',
+    skills: { 'Python': 9, 'React': 7, 'Node.js': 8, 'SQL': 6 },
+    overallScore: 85,
+  },
+  {
+    id: '2',
+    name: 'Bob The Builder',
+    phone: '555-0102',
+    email: 'bob.b@example.com',
+    skills: { 'Java': 8, 'Spring Boot': 9, 'AWS': 7, 'Docker': 7 },
+    overallScore: 92,
+  },
+  {
+    id: '3',
+    name: 'Charlie Brown',
+    phone: '555-0103',
+    email: 'charlie.b@example.com',
+    skills: { 'JavaScript': 7, 'Vue.js': 6, 'CSS': 9, 'HTML': 9 },
+    overallScore: 78,
+  },
+  {
+    id: '4',
+    name: 'Diana Prince',
+    phone: '555-0104',
+    email: 'diana.p@example.com',
+    skills: { 'Python': 10, 'Machine Learning': 9, 'TensorFlow': 8, 'SQL': 7 },
+    overallScore: 95,
+  },
+  {
+    id: '5',
+    name: 'Edward Scissorhands',
+    phone: '555-0105',
+    email: 'edward.s@example.com',
+    skills: { 'Graphic Design': 9, 'Adobe Creative Suite': 10, 'UX/UI': 7 },
+    overallScore: 88,
+  },
+  {
+    id: '6',
+    name: 'Fiona Gallagher',
+    phone: '555-0106',
+    email: 'fiona.g@example.com',
+    skills: { 'Project Management': 8, 'Agile': 9, 'Communication': 10, 'React': 6 },
+    overallScore: 82,
+  },
+];
