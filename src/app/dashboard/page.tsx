@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,6 +26,8 @@ const INITIAL_PARAMETERS: SkillParameter[] = [
 export default function DashboardPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [parameters, setParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
+  const [confirmedParameters, setConfirmedParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
+  
   const [newParamName, setNewParamName] = useState('');
   const [newParamWeight, setNewParamWeight] = useState<number>(5);
 
@@ -39,9 +41,18 @@ export default function DashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize skill filters based on current parameters
-    setSkillFilters(parameters.map(p => ({ skillName: p.name, minScore: '' })));
-  }, [parameters]);
+    setSkillFilters(prevFilters => {
+      const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
+      const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
+      
+      const updatedFilters = confirmedParameters.map(p => ({
+        skillName: p.name,
+        minScore: existingFiltersMap.get(p.name) ?? '',
+      }));
+      
+      return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
+    });
+  }, [confirmedParameters]);
 
 
   const handleAddParameter = () => {
@@ -50,18 +61,26 @@ export default function DashboardPage() {
       return;
     }
     if (parameters.find(p => p.name.toLowerCase() === newParamName.toLowerCase())) {
-      toast({ title: "Error", description: "Skill already exists.", variant: "destructive" });
+      toast({ title: "Error", description: "Skill already exists in the staged list.", variant: "destructive" });
       return;
     }
     setParameters([...parameters, { id: Date.now().toString(), name: newParamName, weight: newParamWeight }]);
     setNewParamName('');
     setNewParamWeight(5);
-    toast({ title: "Success", description: `Skill "${newParamName}" added.`, className: "bg-accent text-accent-foreground" });
+    toast({ title: "Skill Staged", description: `Skill "${newParamName}" staged. Press 'Confirm Skill Configuration' to apply.`, className: "bg-accent text-accent-foreground" });
   };
 
   const handleRemoveParameter = (id: string) => {
+    const removedParam = parameters.find(p => p.id === id);
     setParameters(parameters.filter(p => p.id !== id));
-    toast({ title: "Success", description: "Skill removed." });
+    if (removedParam) {
+      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm Skill Configuration' to apply.`, className: "bg-accent text-accent-foreground" });
+    }
+  };
+
+  const handleConfirmSkillChanges = () => {
+    setConfirmedParameters([...parameters]);
+    toast({ title: "Success", description: "Skill configuration confirmed. Table and filters updated.", className: "bg-accent text-accent-foreground" });
   };
 
   const handleSort = (key: string) => {
@@ -103,7 +122,7 @@ export default function DashboardPage() {
         } else if (sortConfig.key === 'overallScore') {
           valA = a.overallScore;
           valB = b.overallScore;
-        } else { // Skill score
+        } else { 
           valA = a.skills[sortConfig.key] || 0;
           valB = b.skills[sortConfig.key] || 0;
         }
@@ -121,7 +140,7 @@ export default function DashboardPage() {
       toast({ title: "No Data", description: "No data to export.", variant: "destructive"});
       return;
     }
-    exportCandidatesToCSV(filteredAndSortedCandidates, parameters, 'resumerank_export.csv');
+    exportCandidatesToCSV(filteredAndSortedCandidates, confirmedParameters, 'resumerank_export.csv');
     toast({ title: "Export Started", description: "Your CSV export has started.", className: "bg-accent text-accent-foreground" });
   };
   
@@ -138,7 +157,6 @@ export default function DashboardPage() {
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left Column: Inputs */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="shadow-lg">
               <CardHeader>
@@ -172,7 +190,7 @@ export default function DashboardPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline"><PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters</CardTitle>
-                <CardDescription>Define skills and their importance (1-10).</CardDescription>
+                <CardDescription>Define skills and their importance (1-10). Confirm to apply changes.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {parameters.map((param) => (
@@ -201,14 +219,18 @@ export default function DashboardPage() {
                     />
                   </div>
                   <Button onClick={handleAddParameter} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Skill
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Skill to Staging
                   </Button>
                 </div>
               </CardContent>
+              <CardFooter>
+                <Button onClick={handleConfirmSkillChanges} className="w-full">
+                  <CheckCircle className="mr-2 h-4 w-4" /> Confirm Skill Configuration
+                </Button>
+              </CardFooter>
             </Card>
           </div>
 
-          {/* Right Column: Table and Filters */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="shadow-lg">
               <CardHeader>
@@ -237,9 +259,9 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                {parameters.length > 0 && (
+                {skillFilters.length > 0 && (
                   <div className="space-y-2 pt-2 border-t">
-                    <Label className="font-medium">Min. Skill Scores</Label>
+                    <Label className="font-medium">Min. Skill Scores (Active)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     {skillFilters.map((filter, index) => (
                       <div key={filter.skillName}>
@@ -271,7 +293,7 @@ export default function DashboardPage() {
                     <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary"><path d="M16.5 12A2.5 2.5 0 0019 9.5A2.5 2.5 0 0016.5 7A2.5 2.5 0 0014 9.5A2.5 2.5 0 0016.5 12M9 11.5A2.5 2.5 0 0011.5 9A2.5 2.5 0 009 6.5A2.5 2.5 0 006.5 9A2.5 2.5 0 009 11.5M16.5 14A2.5 2.5 0 0014 16.5A2.5 2.5 0 0016.5 19A2.5 2.5 0 0019 16.5A2.5 2.5 0 0016.5 14M9 13.5A2.5 2.5 0 006.5 16A2.5 2.5 0 009 18.5A2.5 2.5 0 0011.5 16A2.5 2.5 0 009 13.5Z"></path></svg>
                      Candidate Scores
                   </CardTitle>
-                  <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s).</CardDescription>
+                  <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
                 </div>
                 <Button onClick={handleExport} variant="outline" size="sm">
                   <Files className="mr-2 h-4 w-4" /> Export to CSV
@@ -285,7 +307,7 @@ export default function DashboardPage() {
                         <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
                         <TableHead className="whitespace-nowrap">Phone</TableHead>
                         <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
-                        {parameters.map(param => (
+                        {confirmedParameters.map(param => (
                           <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
                             {param.name} {getSortIcon(param.name)}
                           </TableHead>
@@ -300,7 +322,7 @@ export default function DashboardPage() {
                             <TableCell className="font-medium whitespace-nowrap">{candidate.name}</TableCell>
                             <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
                             <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
-                            {parameters.map(param => (
+                            {confirmedParameters.map(param => (
                               <TableCell key={`${candidate.id}-${param.id}`} className="text-center">
                                 {candidate.skills[param.name] || 0}/10
                               </TableCell>
@@ -310,8 +332,8 @@ export default function DashboardPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4 + parameters.length} className="h-24 text-center text-muted-foreground">
-                            No candidates match your filters.
+                          <TableCell colSpan={4 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
+                            No candidates match your filters, or no skills confirmed for display.
                           </TableCell>
                         </TableRow>
                       )}
@@ -329,3 +351,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
