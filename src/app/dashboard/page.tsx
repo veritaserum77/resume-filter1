@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, FileCsv, Search } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
 
@@ -273,7 +274,7 @@ export default function DashboardPage() {
                   <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s).</CardDescription>
                 </div>
                 <Button onClick={handleExport} variant="outline" size="sm">
-                  <FileCsv className="mr-2 h-4 w-4" /> Export to CSV
+                  <Files className="mr-2 h-4 w-4" /> Export to CSV
                 </Button>
               </CardHeader>
               <CardContent>
