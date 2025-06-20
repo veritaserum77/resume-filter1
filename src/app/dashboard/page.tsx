@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
@@ -320,6 +320,7 @@ export default function DashboardPage() {
                       <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
                       <TableHead className="whitespace-nowrap">Phone</TableHead>
                       <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
+                      <TableHead className="whitespace-nowrap">Resume</TableHead>
                       {confirmedParameters.map(param => (
                         <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
                           {param.name} {getSortIcon(param.name)}
@@ -335,6 +336,11 @@ export default function DashboardPage() {
                           <TableCell className="font-medium whitespace-nowrap">{candidate.name}</TableCell>
                           <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
                           <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                              <LinkIcon className="h-4 w-4" /> View
+                            </a>
+                          </TableCell>
                           {confirmedParameters.map(param => (
                             <TableCell key={`${candidate.id}-${param.id}`} className="text-center">
                               {candidate.skills[param.name] || 0}/10
@@ -345,7 +351,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={5 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
                           No candidates match your filters, or no skills confirmed for display.
                         </TableCell>
                       </TableRow>
@@ -363,4 +369,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

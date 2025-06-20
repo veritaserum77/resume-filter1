@@ -11,6 +11,7 @@ export function exportCandidatesToCSV(
     'Candidate Name',
     'Phone Number',
     'Email',
+    'Resume URL',
     ...parameters.map(p => `${p.name} Score`),
     'Overall Score (%)',
   ];
@@ -22,6 +23,7 @@ export function exportCandidatesToCSV(
       `"${candidate.name.replace(/"/g, '""')}"`,
       `"${candidate.phone.replace(/"/g, '""')}"`,
       `"${candidate.email.replace(/"/g, '""')}"`,
+      `"${candidate.resumeUrl.replace(/"/g, '""')}"`,
       ...parameters.map(p => candidate.skills[p.name]?.toString() || '0'),
       candidate.overallScore.toString(),
     ];

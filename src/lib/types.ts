@@ -9,6 +9,7 @@ export interface Candidate {
   name: string;
   phone: string;
   email: string;
+  resumeUrl: string; // Added resume URL field
   skills: Record<string, number>; // e.g., { "Python": 8, "React": 7 }
   overallScore: number; // Percentage 0-100
 }
