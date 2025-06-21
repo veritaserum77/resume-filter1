@@ -4,73 +4,73 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%; /* Dark Blue-Gray */
-    --foreground: 220 13% 91%; /* Light Gray */
-    --card: 222 47% 11%;
-    --card-foreground: 220 13% 91%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 220 13% 91%;
-    --primary: 187 90% 43%; /* Teal/Cyan */
-    --primary-foreground: 222 47% 11%; /* Dark text on Teal */
-    --secondary: 222 47% 20%; /* Slightly Lighter Blue-Gray */
-    --secondary-foreground: 220 13% 91%;
-    --muted: 222 47% 20%;
-    --muted-foreground: 220 13% 60%; /* Dimmer Light Gray */
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 187 90% 43%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%;
     --accent: 187 90% 43%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%; /* Red for errors */
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 187 90% 43%;
     --chart-1: 187 90% 43%;
-    --chart-2: 220 13% 60%;
+    --chart-2: 0 0% 63%;
     --chart-3: 187 90% 63%;
-    --chart-4: 220 13% 80%;
+    --chart-4: 0 0% 80%;
     --chart-5: 187 90% 33%;
     --radius: 0.5rem;
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 220 13% 91%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 187 90% 43%;
-    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-primary-foreground: 0 0% 8%;
     --sidebar-accent: 187 90% 43%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 222 47% 20%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 0 0% 15%;
     --sidebar-ring: 187 90% 43%;
   }
 
   .dark {
-    --background: 222 47% 11%; /* Dark Blue-Gray */
-    --foreground: 220 13% 91%; /* Light Gray */
-    --card: 222 47% 11%;
-    --card-foreground: 220 13% 91%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 220 13% 91%;
-    --primary: 187 90% 43%; /* Teal/Cyan */
-    --primary-foreground: 222 47% 11%; /* Dark text on Teal */
-    --secondary: 222 47% 20%; /* Slightly Lighter Blue-Gray */
-    --secondary-foreground: 220 13% 91%;
-    --muted: 222 47% 20%;
-    --muted-foreground: 220 13% 60%; /* Dimmer Light Gray */
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 187 90% 43%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%;
     --accent: 187 90% 43%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%; /* Red for errors */
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 187 90% 43%;
     --chart-1: 187 90% 43%;
-    --chart-2: 220 13% 60%;
+    --chart-2: 0 0% 63%;
     --chart-3: 187 90% 63%;
-    --chart-4: 220 13% 80%;
+    --chart-4: 0 0% 80%;
     --chart-5: 187 90% 33%;
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 220 13% 91%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 187 90% 43%;
-    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-primary-foreground: 0 0% 8%;
     --sidebar-accent: 187 90% 43%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 222 47% 20%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 0 0% 15%;
     --sidebar-ring: 187 90% 43%;
   }
 }
