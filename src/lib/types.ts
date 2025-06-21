@@ -1,3 +1,4 @@
+
 export interface SkillParameter {
   id: string;
   name: string;
@@ -12,4 +13,13 @@ export interface Candidate {
   resumeUrl: string; // Added resume URL field
   skills: Record<string, number>; // e.g., { "Python": 8, "React": 7 }
   overallScore: number; // Percentage 0-100
+}
+
+export interface Shortlist {
+  id: string;
+  title: string;
+  jobTitle: string;
+  candidateCount: number;
+  lastModified: string;
+  isDraft: boolean;
 }
