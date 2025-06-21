@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to suggest skills based on a job description.
@@ -10,12 +11,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const SuggestSkillsInputSchema = z.object({
+const SuggestSkillsInputSchema = z.object({
   jobDescription: z.string().describe('The full text of the job description.'),
 });
 export type SuggestSkillsInput = z.infer<typeof SuggestSkillsInputSchema>;
 
-export const SuggestSkillsOutputSchema = z.object({
+const SuggestSkillsOutputSchema = z.object({
   skills: z
     .array(z.string().describe('A single, relevant technical or soft skill.'))
     .describe('A list of 5 to 10 key skills extracted from the job description.'),
