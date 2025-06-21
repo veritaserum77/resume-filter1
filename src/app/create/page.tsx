@@ -24,6 +24,7 @@ const INITIAL_PARAMETERS: SkillParameter[] = [];
 export default function CreatePage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [shortlistId, setShortlistId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -233,7 +234,11 @@ export default function CreatePage() {
       <DashboardHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         
-        <Dialog open={isNewShortlistModalOpen}>
+        <Dialog open={isNewShortlistModalOpen} onOpenChange={(open) => {
+            if (!open) {
+              router.push('/dashboard');
+            }
+        }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Create New Shortlist</DialogTitle>
@@ -262,6 +267,7 @@ export default function CreatePage() {
                     </div>
                 </div>
                 <DialogFooter>
+                    <Button variant="outline" onClick={() => router.push('/dashboard')}>Cancel</Button>
                     <Button onClick={handleSetDetails}>Start Creating</Button>
                 </DialogFooter>
             </DialogContent>
