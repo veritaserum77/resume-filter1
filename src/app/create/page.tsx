@@ -3,7 +3,6 @@
 
 import { useState, useMemo, useEffect, ChangeEvent } from 'react';
 import type { Candidate, SkillParameter } from '@/lib/types';
-import { mockCandidates } from '@/lib/mockData';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
 
 import { Button } from '@/components/ui/button';
@@ -18,10 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
 
-const INITIAL_PARAMETERS: SkillParameter[] = [
-  { id: 'param1', name: 'Python', weight: 9 },
-  { id: 'param2', name: 'React', weight: 7 },
-];
+const INITIAL_PARAMETERS: SkillParameter[] = [];
 
 export default function CreatePage() {
   const [jobDescription, setJobDescription] = useState('');
@@ -31,7 +27,7 @@ export default function CreatePage() {
   const [newParamName, setNewParamName] = useState('');
   const [newParamWeight, setNewParamWeight] = useState<number>(5);
 
-  const [candidates, setCandidates] = useState<Candidate[]>(mockCandidates);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [gdriveLink, setGdriveLink] = useState('');
