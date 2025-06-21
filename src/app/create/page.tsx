@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Sparkles, Loader2 } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Sparkles, Loader2, ClipboardList } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
@@ -469,12 +469,6 @@ export default function CreatePage() {
           </Card>
         </div>
 
-        <div className="flex justify-center my-6">
-            <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
-                <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
-            </Button>
-        </div>
-
         {suggestedSkills.length > 0 && (
           <Card className="shadow-lg">
             <CardHeader>
@@ -493,12 +487,18 @@ export default function CreatePage() {
           </Card>
         )}
 
+        <div className="flex justify-center my-6">
+            <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
+                <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
+            </Button>
+        </div>
+
         {/* Candidate Scores Card */}
         <Card className="shadow-lg lg:col-span-3">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
             <div className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2 font-headline">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary"><path d="M16.5 12A2.5 2.5 0 0019 9.5A2.5 2.5 0 0016.5 7A2.5 2.5 0 0014 9.5A2.5 2.5 0 0016.5 12M9 11.5A2.5 2.5 0 0011.5 9A2.5 2.5 0 009 6.5A2.5 2.5 0 006.5 9A2.5 2.5 0 009 11.5M16.5 14A2.5 2.5 0 0014 16.5A2.5 2.5 0 0016.5 19A2.5 2.5 0 0019 16.5A2.5 2.5 0 0016.5 14M9 13.5A2.5 2.5 0 006.5 16A2.5 2.5 0 009 18.5A2.5 2.5 0 0011.5 16A2.5 2.5 0 009 13.5Z"></path></svg>
+                <ClipboardList className="h-5 w-5 text-primary" />
                   Candidate Scores
               </CardTitle>
               <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
@@ -616,7 +616,7 @@ export default function CreatePage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
+                </Body>
               </Table>
             </div>
           </CardContent>
