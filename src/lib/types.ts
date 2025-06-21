@@ -10,7 +10,7 @@ export interface Candidate {
   name: string;
   phone: string;
   email: string;
-  resumeUrl: string; // Added resume URL field
+  resumeUrl: string;
   skills: Record<string, number>; // e.g., { "Python": 8, "React": 7 }
   overallScore: number; // Percentage 0-100
 }
@@ -22,4 +22,7 @@ export interface Shortlist {
   candidateCount: number;
   lastModified: string;
   isDraft: boolean;
+  jobDescription: string;
+  parameters: SkillParameter[];
+  candidates: Candidate[];
 }

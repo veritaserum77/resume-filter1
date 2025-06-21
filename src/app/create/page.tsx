@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect, ChangeEvent } from 'react';
-import type { Candidate, SkillParameter } from '@/lib/types';
+import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Edit } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
@@ -20,25 +21,57 @@ import { useToast } from '@/hooks/use-toast';
 const INITIAL_PARAMETERS: SkillParameter[] = [];
 
 export default function CreatePage() {
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+
+  const [shortlistId, setShortlistId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Shortlist-specific state
+  const [shortlistTitle, setShortlistTitle] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [gdriveLink, setGdriveLink] = useState('');
+
+  // Staged vs. Confirmed parameters
   const [parameters, setParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
   const [confirmedParameters, setConfirmedParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
   
+  // Staging new parameters
   const [newParamName, setNewParamName] = useState('');
   const [newParamWeight, setNewParamWeight] = useState<number>(5);
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   
+  // Table state
   const [searchTerm, setSearchTerm] = useState('');
-  const [gdriveLink, setGdriveLink] = useState('');
   const [overallScoreFilter, setOverallScoreFilter] = useState<number | ''>('');
   const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
-
-  const { toast } = useToast();
-
+  
+  // Load data on component mount
   useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setShortlistId(id);
+      const storedShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+      const data = storedShortlists.find(s => s.id === id);
+      if (data) {
+        setShortlistTitle(data.title);
+        setJobTitle(data.jobTitle);
+        setJobDescription(data.jobDescription);
+        setParameters(data.parameters);
+        setConfirmedParameters(data.parameters); // Confirm them immediately on load
+        setCandidates(data.candidates);
+      }
+    }
+    setIsLoaded(true);
+  }, [searchParams]);
+
+  // Update skill filters when confirmed parameters change
+  useEffect(() => {
+    if (!isLoaded) return;
     setSkillFilters(prevFilters => {
       const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
       const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
@@ -50,8 +83,7 @@ export default function CreatePage() {
       
       return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
     });
-  }, [confirmedParameters]);
-
+  }, [confirmedParameters, isLoaded]);
 
   const handleAddParameter = () => {
     if (newParamName.trim() === '') {
@@ -65,20 +97,54 @@ export default function CreatePage() {
     setParameters([...parameters, { id: Date.now().toString(), name: newParamName, weight: newParamWeight }]);
     setNewParamName('');
     setNewParamWeight(5);
-    toast({ title: "Skill Staged", description: `Skill "${newParamName}" staged. Press 'Confirm Skill Configuration' to apply.`, className: "bg-accent text-accent-foreground" });
+    toast({ title: "Skill Staged", description: `Skill "${newParamName}" staged. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
   };
 
   const handleRemoveParameter = (id: string) => {
     const removedParam = parameters.find(p => p.id === id);
     setParameters(parameters.filter(p => p.id !== id));
     if (removedParam) {
-      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm Skill Configuration' to apply.`, className: "bg-accent text-accent-foreground" });
+      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
     }
   };
 
-  const handleConfirmSkillChanges = () => {
+  const handleConfirmAndSave = () => {
+    if (!shortlistTitle.trim() || !jobTitle.trim()) {
+        toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
+        return;
+    }
+    // 1. Confirm skills for the table
     setConfirmedParameters([...parameters]);
-    toast({ title: "Success", description: "Skill configuration confirmed. Table and filters updated.", className: "bg-accent text-accent-foreground" });
+
+    // 2. Save/Update logic
+    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+    const isUpdating = allShortlists.some(s => s.id === shortlistId);
+    let updatedShortlists;
+
+    const shortlistData = {
+        title: shortlistTitle,
+        jobTitle,
+        jobDescription,
+        parameters,
+        candidates,
+        candidateCount: candidates.length,
+        lastModified: 'Today',
+        isDraft: false,
+    };
+
+    if (isUpdating) {
+        updatedShortlists = allShortlists.map(s => 
+            s.id === shortlistId ? { ...s, ...shortlistData } : s
+        );
+    } else {
+        const newId = shortlistId || `sl-${Date.now()}`;
+        const newShortlist: Shortlist = { id: newId, ...shortlistData };
+        updatedShortlists = [...allShortlists, newShortlist];
+        setShortlistId(newId); // Set ID in state for subsequent saves
+    }
+    
+    localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved.`, className: "bg-accent text-accent-foreground" });
   };
 
   const handleSort = (key: string) => {
@@ -155,6 +221,36 @@ export default function CreatePage() {
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+
+          <Card className="shadow-lg lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline"><Edit className="h-5 w-5 text-primary" /> Shortlist Details</CardTitle>
+              <CardDescription>Give your shortlist a unique name and its corresponding job title. This is required to save.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="shortlistTitle">Shortlist Title</Label>
+                <Input
+                  id="shortlistTitle"
+                  type="text"
+                  placeholder="e.g. Q3 Frontend Engineers"
+                  value={shortlistTitle}
+                  onChange={(e) => setShortlistTitle(e.target.value)}
+                />
+               </div>
+               <div className="space-y-2">
+                <Label htmlFor="jobTitle">Job Title</Label>
+                <Input
+                  id="jobTitle"
+                  type="text"
+                  placeholder="e.g. Senior Frontend Engineer"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                />
+               </div>
+            </CardContent>
+          </Card>
+
           {/* Resume Upload Card */}
           <Card className="shadow-lg">
             <CardHeader>
@@ -190,13 +286,14 @@ export default function CreatePage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-headline"><FileText className="h-5 w-5 text-primary" /> Job Description</CardTitle>
+              <CardDescription>Paste the full job description. This provides context for scoring.</CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
                 placeholder="Paste job description here..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                className="min-h-[150px] resize-y"
+                className="min-h-[200px] lg:min-h-[270px] resize-y"
               />
             </CardContent>
           </Card>
@@ -205,7 +302,7 @@ export default function CreatePage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-headline"><PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters</CardTitle>
-              <CardDescription>Define skills and their importance (1-10). Confirm to apply changes.</CardDescription>
+              <CardDescription>Define skills and their importance (1-10). Confirm to apply and save.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {parameters.map((param) => (
@@ -239,8 +336,8 @@ export default function CreatePage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleConfirmSkillChanges} className="w-full">
-                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Skill Configuration
+              <Button onClick={handleConfirmAndSave} className="w-full">
+                <CheckCircle className="mr-2 h-4 w-4" /> Confirm & Save Shortlist
               </Button>
             </CardFooter>
           </Card>

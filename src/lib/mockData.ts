@@ -21,6 +21,13 @@ export const mockShortlists: Shortlist[] = [
     candidateCount: 15,
     lastModified: '2 days ago',
     isDraft: false,
+    jobDescription: 'Seeking an experienced Frontend Engineer to join our dynamic team...',
+    parameters: [
+      { id: 'p1', name: 'React', weight: 10 },
+      { id: 'p2', name: 'TypeScript', weight: 8 },
+      { id: 'p3', name: 'CSS-in-JS', weight: 6 },
+    ],
+    candidates: [],
   },
   {
     id: 'shortlist-2',
@@ -29,6 +36,9 @@ export const mockShortlists: Shortlist[] = [
     candidateCount: 8,
     lastModified: '5 days ago',
     isDraft: false,
+    jobDescription: '',
+    parameters: [],
+    candidates: [],
   },
   {
     id: 'shortlist-3',
@@ -37,6 +47,9 @@ export const mockShortlists: Shortlist[] = [
     candidateCount: 22,
     lastModified: '1 week ago',
     isDraft: false,
+    jobDescription: '',
+    parameters: [],
+    candidates: [],
   },
   {
     id: 'draft-1',
@@ -45,6 +58,12 @@ export const mockShortlists: Shortlist[] = [
     candidateCount: 5,
     lastModified: '3 hours ago',
     isDraft: true,
+    jobDescription: 'Looking for a creative UX/UI designer...',
+    parameters: [
+      { id: 'p4', name: 'Figma', weight: 10 },
+      { id: 'p5', name: 'User Research', weight: 9 },
+    ],
+    candidates: [],
   },
   {
     id: 'draft-2',
@@ -53,5 +72,8 @@ export const mockShortlists: Shortlist[] = [
     candidateCount: 2,
     lastModified: 'yesterday',
     isDraft: true,
+    jobDescription: '',
+    parameters: [],
+    candidates: [],
   }
 ];
