@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Sparkles, Loader2, ClipboardList } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Sparkles, Loader2, ClipboardList, ChevronUp, ChevronDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
@@ -321,7 +321,10 @@ export default function CreatePage() {
     if (!sortConfig || sortConfig.key !== key) {
       return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/70" />;
     }
-    return sortConfig.direction === 'asc' ? '▲' : '▼';
+    if (sortConfig.direction === 'asc') {
+      return <ChevronUp className="ml-2 h-4 w-4" />;
+    }
+    return <ChevronDown className="ml-2 h-4 w-4" />;
   };
 
   return (
@@ -616,7 +619,7 @@ export default function CreatePage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </Body>
+                </TableBody>
               </Table>
             </div>
           </CardContent>
