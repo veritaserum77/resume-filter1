@@ -13,10 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Edit } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const INITIAL_PARAMETERS: SkillParameter[] = [];
 
@@ -49,6 +50,7 @@ export default function CreatePage() {
   const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
+  const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
   
   // Load data on component mount
   useEffect(() => {
@@ -65,6 +67,9 @@ export default function CreatePage() {
         setConfirmedParameters(data.parameters); // Confirm them immediately on load
         setCandidates(data.candidates);
       }
+    } else {
+      // It's a new shortlist, so open the modal to get details first.
+      setIsNewShortlistModalOpen(true);
     }
     setIsLoaded(true);
   }, [searchParams]);
@@ -84,6 +89,14 @@ export default function CreatePage() {
       return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
     });
   }, [confirmedParameters, isLoaded]);
+
+  const handleSetDetails = () => {
+    if (!shortlistTitle.trim() || !jobTitle.trim()) {
+        toast({ title: "Details Required", description: "Please provide both a Shortlist Title and a Job Title to continue.", variant: "destructive" });
+        return;
+    }
+    setIsNewShortlistModalOpen(false);
+  };
 
   const handleAddParameter = () => {
     if (newParamName.trim() === '') {
@@ -220,36 +233,41 @@ export default function CreatePage() {
       <DashboardHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         
+        <Dialog open={isNewShortlistModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create New Shortlist</DialogTitle>
+                    <DialogDescription>
+                        First, give your new shortlist a title and the associated job title.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="modalShortlistTitle">Shortlist Title</Label>
+                        <Input
+                            id="modalShortlistTitle"
+                            value={shortlistTitle}
+                            onChange={(e) => setShortlistTitle(e.target.value)}
+                            placeholder="e.g. Q4 Backend Engineers"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="modalJobTitle">Job Title</Label>
+                        <Input
+                            id="modalJobTitle"
+                            value={jobTitle}
+                            onChange={(e) => setJobTitle(e.target.value)}
+                            placeholder="e.g. Senior Go Developer"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSetDetails}>Start Creating</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-
-          <Card className="shadow-lg lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline"><Edit className="h-5 w-5 text-primary" /> Shortlist Details</CardTitle>
-              <CardDescription>Give your shortlist a unique name and its corresponding job title. This is required to save.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-2">
-                <Label htmlFor="shortlistTitle">Shortlist Title</Label>
-                <Input
-                  id="shortlistTitle"
-                  type="text"
-                  placeholder="e.g. Q3 Frontend Engineers"
-                  value={shortlistTitle}
-                  onChange={(e) => setShortlistTitle(e.target.value)}
-                />
-               </div>
-               <div className="space-y-2">
-                <Label htmlFor="jobTitle">Job Title</Label>
-                <Input
-                  id="jobTitle"
-                  type="text"
-                  placeholder="e.g. Senior Frontend Engineer"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                />
-               </div>
-            </CardContent>
-          </Card>
 
           {/* Resume Upload Card */}
           <Card className="shadow-lg">
