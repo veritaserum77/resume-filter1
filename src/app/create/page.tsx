@@ -28,6 +28,7 @@ export default function CreatePage() {
 
   const [shortlistId, setShortlistId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [tempId] = useState(() => `sl-${Date.now()}`); // Stable ID for a new shortlist session
 
   // Shortlist-specific state
   const [shortlistTitle, setShortlistTitle] = useState('');
@@ -77,41 +78,44 @@ export default function CreatePage() {
 
   // Auto-save as draft on unmount for new, unsaved shortlists
   useEffect(() => {
-    // This function is the "cleanup" function, which runs when the component unmounts.
     return () => {
-      // Only run this logic if the component has finished its initial load.
       if (!isLoaded) {
         return;
       }
 
-      // A draft should only be saved if:
-      // 1. It's a new shortlist that has never been saved (shortlistId is null).
-      // 2. The user has entered at least a title and job title.
       const isNewUnsavedShortlist = !shortlistId;
-      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' && jobTitle.trim() !== '';
+      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
       
       if (isNewUnsavedShortlist && hasContentToSaveAsDraft) {
         const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
         
-        const newDraft: Shortlist = {
-          id: `sl-${Date.now()}`,
-          title: shortlistTitle,
-          jobTitle: jobTitle,
+        const draftData: Shortlist = {
+          id: tempId, // Use the stable tempId for the draft
+          title: shortlistTitle || 'Untitled Shortlist',
+          jobTitle: jobTitle || 'Untitled Job',
           jobDescription: jobDescription,
           parameters: parameters,
           candidates: candidates,
           candidateCount: candidates.length,
           lastModified: 'Today',
-          isDraft: true, // Mark as draft
+          isDraft: true,
         };
 
-        const updatedShortlists = [...allShortlists, newDraft];
+        const existingDraftIndex = allShortlists.findIndex(s => s.id === tempId);
+        let updatedShortlists;
+        if (existingDraftIndex > -1) {
+          // Update the existing draft
+          updatedShortlists = allShortlists.map(s => s.id === tempId ? draftData : s);
+        } else {
+          // Add a new draft
+          updatedShortlists = [...allShortlists, draftData];
+        }
+        
         localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
       }
     };
-    // The dependency array includes all the pieces of state that make up a draft.
-    // This ensures the cleanup function has the latest values when it runs.
-  }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates]);
+  }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
+
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -165,13 +169,12 @@ export default function CreatePage() {
         toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
         return;
     }
-    // 1. Confirm skills for the table
     setConfirmedParameters([...parameters]);
 
-    // 2. Save/Update logic
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    const isUpdating = allShortlists.some(s => s.id === shortlistId);
-    let updatedShortlists;
+    
+    // The ID for the shortlist is either from the URL (editing) or the stable tempId (new).
+    const currentId = shortlistId || tempId;
 
     const shortlistData = {
         title: shortlistTitle,
@@ -181,24 +184,26 @@ export default function CreatePage() {
         candidates,
         candidateCount: candidates.length,
         lastModified: 'Today',
-        isDraft: false,
+        isDraft: false, // This is a confirmed save, so it's not a draft.
     };
 
-    if (isUpdating) {
+    const existingIndex = allShortlists.findIndex(s => s.id === currentId);
+    let updatedShortlists;
+
+    if (existingIndex > -1) {
+        // This updates a loaded shortlist OR promotes an auto-saved draft.
         updatedShortlists = allShortlists.map(s => 
-            s.id === shortlistId ? { ...s, ...shortlistData } : s
+            s.id === currentId ? { ...s, ...shortlistData, id: currentId } : s
         );
     } else {
-        const newId = shortlistId || `sl-${Date.now()}`;
-        if (shortlistId) {
-            // This case handles promoting a draft to a full shortlist
-            updatedShortlists = allShortlists.map(s => s.id === shortlistId ? { ...s, ...shortlistData } : s);
-        } else {
-            // This is a brand new, non-draft shortlist
-            const newShortlist: Shortlist = { id: newId, ...shortlistData };
-            updatedShortlists = [...allShortlists, newShortlist];
-            setShortlistId(newId); // Set ID in state for subsequent saves
-        }
+        // This handles a new shortlist that wasn't auto-saved (user didn't navigate away).
+        const newShortlist: Shortlist = { id: currentId, ...shortlistData };
+        updatedShortlists = [...allShortlists, newShortlist];
+    }
+    
+    // Set the component's ID so subsequent saves are treated as updates.
+    if (!shortlistId) {
+        setShortlistId(currentId);
     }
     
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
@@ -280,8 +285,6 @@ export default function CreatePage() {
         
         <Dialog open={isNewShortlistModalOpen} onOpenChange={(open) => {
             if (!open) {
-              // If the modal is closed without confirmation, navigate back to dashboard
-              // This check prevents being stranded on an empty page if it was a new shortlist
               if (!shortlistId) {
                   router.push('/dashboard');
               }
