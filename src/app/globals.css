@@ -4,74 +4,74 @@
 
 @layer base {
   :root {
-    --background: 195 27% 95%; /* #F0F4F5 Very Light Blue */
-    --foreground: 220 15% 25%; /* Darker gray for text, good contrast on light blue */
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 25%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 25%;
-    --primary: 197 24% 58%; /* #79A3B1 Muted Blue */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 90%; /* Lighter shade of primary/background */
-    --secondary-foreground: 197 24% 30%; /* Darker Muted Blue for text on secondary */
-    --muted: 210 40% 90%;
-    --muted-foreground: 210 20% 55%; /* Softer gray for muted text */
-    --accent: 176 26% 55%; /* #68B0AB Teal */
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 70% 55%; /* Standard red for destructive actions */
-    --destructive-foreground: 0 0% 98%;
-    --border: 197 20% 80%; /* Softer border color related to primary/background */
-    --input: 197 20% 85%; /* Slightly darker for input fields */
-    --ring: 197 24% 58%; /* Muted Blue for focus rings */
-    --chart-1: 197 24% 58%;
-    --chart-2: 176 26% 55%;
-    --chart-3: 197 30% 70%;
-    --chart-4: 176 30% 65%;
-    --chart-5: 210 30% 60%;
+    --background: 222 47% 11%; /* Dark Blue-Gray */
+    --foreground: 220 13% 91%; /* Light Gray */
+    --card: 222 47% 11%;
+    --card-foreground: 220 13% 91%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 220 13% 91%;
+    --primary: 187 90% 43%; /* Teal/Cyan */
+    --primary-foreground: 222 47% 11%; /* Dark text on Teal */
+    --secondary: 222 47% 20%; /* Slightly Lighter Blue-Gray */
+    --secondary-foreground: 220 13% 91%;
+    --muted: 222 47% 20%;
+    --muted-foreground: 220 13% 60%; /* Dimmer Light Gray */
+    --accent: 187 90% 43%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%; /* Red for errors */
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 47% 20%;
+    --input: 222 47% 20%;
+    --ring: 187 90% 43%;
+    --chart-1: 187 90% 43%;
+    --chart-2: 220 13% 60%;
+    --chart-3: 187 90% 63%;
+    --chart-4: 220 13% 80%;
+    --chart-5: 187 90% 33%;
     --radius: 0.5rem;
-    --sidebar-background: 200 25% 92%; /* Slightly different light blue for sidebar */
-    --sidebar-foreground: 220 15% 25%;
-    --sidebar-primary: 197 24% 58%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 176 26% 55%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 197 20% 80%;
-    --sidebar-ring: 197 24% 58%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 220 13% 91%;
+    --sidebar-primary: 187 90% 43%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 187 90% 43%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 222 47% 20%;
+    --sidebar-ring: 187 90% 43%;
   }
 
   .dark {
-    --background: 220 15% 10%; /* Dark blue/gray */
-    --foreground: 210 40% 95%;
-    --card: 220 15% 15%;
-    --card-foreground: 210 40% 95%;
-    --popover: 220 15% 10%;
-    --popover-foreground: 210 40% 95%;
-    --primary: 197 24% 58%; /* Muted Blue */
-    --primary-foreground: 220 10% 10%; /* Dark text on Muted Blue */
-    --secondary: 220 15% 25%; /* Darker shade */
-    --secondary-foreground: 210 40% 95%;
-    --muted: 220 15% 25%;
-    --muted-foreground: 210 30% 70%; /* Lighter muted text for dark mode */
-    --accent: 176 26% 55%; /* Teal */
-    --accent-foreground: 220 10% 10%; /* Dark text on Teal */
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 30%;
-    --input: 220 15% 30%;
-    --ring: 197 24% 58%;
-    --chart-1: 197 24% 58%;
-    --chart-2: 176 26% 55%;
-    --chart-3: 197 30% 70%;
-    --chart-4: 176 30% 65%;
-    --chart-5: 210 30% 60%;
-    --sidebar-background: 220 15% 12%;
-    --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 197 24% 58%;
-    --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 176 26% 55%;
-    --sidebar-accent-foreground: 220 10% 10%;
-    --sidebar-border: 220 15% 30%;
-    --sidebar-ring: 197 24% 58%;
+    --background: 222 47% 11%; /* Dark Blue-Gray */
+    --foreground: 220 13% 91%; /* Light Gray */
+    --card: 222 47% 11%;
+    --card-foreground: 220 13% 91%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 220 13% 91%;
+    --primary: 187 90% 43%; /* Teal/Cyan */
+    --primary-foreground: 222 47% 11%; /* Dark text on Teal */
+    --secondary: 222 47% 20%; /* Slightly Lighter Blue-Gray */
+    --secondary-foreground: 220 13% 91%;
+    --muted: 222 47% 20%;
+    --muted-foreground: 220 13% 60%; /* Dimmer Light Gray */
+    --accent: 187 90% 43%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%; /* Red for errors */
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 47% 20%;
+    --input: 222 47% 20%;
+    --ring: 187 90% 43%;
+    --chart-1: 187 90% 43%;
+    --chart-2: 220 13% 60%;
+    --chart-3: 187 90% 63%;
+    --chart-4: 220 13% 80%;
+    --chart-5: 187 90% 33%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 220 13% 91%;
+    --sidebar-primary: 187 90% 43%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 187 90% 43%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 222 47% 20%;
+    --sidebar-ring: 187 90% 43%;
   }
 }
 
