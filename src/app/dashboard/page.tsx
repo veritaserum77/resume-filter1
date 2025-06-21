@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { PlusCircle, FileText, Users, Clock, Edit } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import type { Shortlist } from '@/lib/types';
-import { mockShortlists } from '@/lib/mockData';
 import { useEffect, useState } from 'react';
 
 const ShortlistCard = ({ shortlist }: { shortlist: Shortlist }) => {
@@ -46,14 +45,13 @@ export default function DashboardPage() {
   useEffect(() => {
     // This code runs only on the client, after the component has mounted.
     const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
-    let allShortlists: Shortlist[];
+    let allShortlists: Shortlist[] = [];
 
     if (storedShortlistsJSON) {
       allShortlists = JSON.parse(storedShortlistsJSON);
     } else {
-      // If nothing is in localStorage, seed it with the mock data.
-      allShortlists = mockShortlists;
-      localStorage.setItem('resumerank_shortlists', JSON.stringify(mockShortlists));
+      // If nothing is in localStorage, initialize with an empty array.
+      localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
     }
     
     setShortlists(allShortlists.filter(s => !s.isDraft));
