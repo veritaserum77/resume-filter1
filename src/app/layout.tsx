@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         {/* The existing font links are fine for Inter, next/font is also good.
             No new <link> elements needed as Inter is already handled.
