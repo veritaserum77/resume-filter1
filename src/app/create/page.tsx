@@ -171,17 +171,16 @@ export default function CreatePage() {
 
   const handleConfirmAndSave = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
-        toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
-        return;
+      toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
+      return;
     }
     setConfirmedParameters([...parameters]);
 
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    
-    // The ID for the shortlist is either from the URL (editing) or the stable tempId (new).
     const currentId = shortlistId || tempId;
 
-    const shortlistData = {
+    const shortlistData: Shortlist = {
+        id: currentId,
         title: shortlistTitle,
         jobTitle,
         jobDescription,
@@ -196,17 +195,14 @@ export default function CreatePage() {
     let updatedShortlists;
 
     if (existingIndex > -1) {
-        // This updates a loaded shortlist OR promotes an auto-saved draft.
-        updatedShortlists = allShortlists.map(s => 
-            s.id === currentId ? { ...s, ...shortlistData, id: currentId } : s
-        );
+        // This updates a loaded shortlist OR promotes an auto-saved draft by explicitly replacing it.
+        allShortlists[existingIndex] = shortlistData;
+        updatedShortlists = allShortlists;
     } else {
-        // This handles a new shortlist that wasn't auto-saved (user didn't navigate away).
-        const newShortlist: Shortlist = { id: currentId, ...shortlistData };
-        updatedShortlists = [...allShortlists, newShortlist];
+        // This handles a new shortlist that wasn't auto-saved.
+        updatedShortlists = [...allShortlists, shortlistData];
     }
     
-    // Set the component's ID so subsequent saves are treated as updates.
     if (!shortlistId) {
         setShortlistId(currentId);
     }
@@ -635,5 +631,3 @@ export default function CreatePage() {
     </div>
   );
 }
-
-    
