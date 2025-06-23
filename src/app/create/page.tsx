@@ -84,16 +84,21 @@ function CreatePageContent() {
     return () => {
       if (!isLoaded) return;
 
+      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+      const currentId = shortlistId || tempId;
+      const existingItem = allShortlists.find(s => s.id === currentId);
+
+      // If the shortlist is already confirmed and saved, don't create a draft.
+      if (existingItem && !existingItem.isDraft) {
+        return;
+      }
+      
       const isNewUnsavedShortlist = !shortlistId;
       const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
-      
-      if (isNewUnsavedShortlist && hasContentToSaveAsDraft) {
-        const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-        const existingItem = allShortlists.find(s => s.id === tempId);
-        if(existingItem && !existingItem.isDraft) return;
 
+      if ((isNewUnsavedShortlist || (existingItem && existingItem.isDraft)) && hasContentToSaveAsDraft) {
         const draftData: Shortlist = {
-          id: tempId,
+          id: currentId,
           title: shortlistTitle || 'Untitled Shortlist',
           jobTitle: jobTitle || 'Untitled Job',
           jobDescription: jobDescription,
@@ -104,10 +109,10 @@ function CreatePageContent() {
           isDraft: true,
         };
 
-        const existingDraftIndex = allShortlists.findIndex(s => s.id === tempId);
+        const existingDraftIndex = allShortlists.findIndex(s => s.id === currentId);
         let updatedShortlists;
         if (existingDraftIndex > -1) {
-          updatedShortlists = allShortlists.map(s => s.id === tempId ? draftData : s);
+          updatedShortlists = allShortlists.map(s => s.id === currentId ? draftData : s);
         } else {
           updatedShortlists = [...allShortlists, draftData];
         }
@@ -116,6 +121,7 @@ function CreatePageContent() {
       }
     };
   }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
+
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -623,6 +629,7 @@ function CreatePageContent() {
     </div>
   );
 }
+
 
 export default function CreatePage() {
   return (
