@@ -94,6 +94,12 @@ export default function CreatePage() {
       if (isNewUnsavedShortlist && hasContentToSaveAsDraft) {
         const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
         
+        // This prevents overwriting a confirmed shortlist with a draft.
+        const existingItem = allShortlists.find(s => s.id === tempId);
+        if(existingItem && !existingItem.isDraft) {
+            return;
+        }
+
         const draftData: Shortlist = {
           id: tempId, // Use the stable tempId for the draft
           title: shortlistTitle || 'Untitled Shortlist',
@@ -109,10 +115,8 @@ export default function CreatePage() {
         const existingDraftIndex = allShortlists.findIndex(s => s.id === tempId);
         let updatedShortlists;
         if (existingDraftIndex > -1) {
-          // Update the existing draft
           updatedShortlists = allShortlists.map(s => s.id === tempId ? draftData : s);
         } else {
-          // Add a new draft
           updatedShortlists = [...allShortlists, draftData];
         }
         
