@@ -248,12 +248,16 @@ export default function CreatePage() {
 
   const handleAddSuggestedSkill = (skillName: string) => {
     if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
-        toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "destructive" });
+        toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
         return;
     }
-    setParameters([...parameters, { id: Date.now().toString(), name: skillName, weight: 5 }]);
-    setSuggestedSkills(prev => prev.filter(s => s !== skillName)); // remove from suggestions
-    toast({ title: "Skill Staged", description: `Skill "${skillName}" staged with weight 5.`, className: "bg-accent text-accent-foreground" });
+    setNewParamName(skillName);
+    setSuggestedSkills(prev => prev.filter(s => s !== skillName));
+    toast({ 
+      title: "Skill Selected", 
+      description: `"${skillName}" is loaded. Adjust its weight and click 'Add Skill' to stage it.`,
+      className: "bg-accent text-accent-foreground"
+    });
   };
 
   const handleSort = (key: string) => {
@@ -476,7 +480,7 @@ export default function CreatePage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-headline"><Sparkles className="h-5 w-5 text-primary" /> AI Skill Suggestions</CardTitle>
-              <CardDescription>Click a skill to add it to your parameters with a default weight of 5.</CardDescription>
+              <CardDescription>Click a skill to load it into the form above. You can then adjust its weight before adding.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -631,3 +635,5 @@ export default function CreatePage() {
     </div>
   );
 }
+
+    
