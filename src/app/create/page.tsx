@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, useEffect, ChangeEvent } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
 import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,14 +21,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 const INITIAL_PARAMETERS: SkillParameter[] = [];
 
-export default function CreatePage() {
+function CreatePageContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const router = useRouter();
 
   const [shortlistId, setShortlistId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [tempId] = useState(() => `sl-${Date.now()}`); // Stable ID for a new shortlist session
+  const [tempId] = useState(() => `sl-${Date.now()}`);
 
   // Shortlist-specific state
   const [shortlistTitle, setShortlistTitle] = useState('');
@@ -71,37 +70,30 @@ export default function CreatePage() {
         setJobTitle(data.jobTitle);
         setJobDescription(data.jobDescription);
         setParameters(data.parameters);
-        setConfirmedParameters(data.parameters); // Confirm them immediately on load
+        setConfirmedParameters(data.parameters);
         setCandidates(data.candidates);
       }
     } else {
-      // It's a new shortlist, so open the modal to get details first.
       setIsNewShortlistModalOpen(true);
     }
     setIsLoaded(true);
   }, [searchParams]);
 
-  // Auto-save as draft on unmount for new, unsaved shortlists
+  // Auto-save as draft on unmount
   useEffect(() => {
     return () => {
-      if (!isLoaded) {
-        return;
-      }
+      if (!isLoaded) return;
 
       const isNewUnsavedShortlist = !shortlistId;
       const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
       
       if (isNewUnsavedShortlist && hasContentToSaveAsDraft) {
         const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-        
-        // This prevents overwriting a confirmed shortlist with a draft.
         const existingItem = allShortlists.find(s => s.id === tempId);
-        if(existingItem && !existingItem.isDraft) {
-            return;
-        }
+        if(existingItem && !existingItem.isDraft) return;
 
         const draftData: Shortlist = {
-          id: tempId, // Use the stable tempId for the draft
+          id: tempId,
           title: shortlistTitle || 'Untitled Shortlist',
           jobTitle: jobTitle || 'Untitled Job',
           jobDescription: jobDescription,
@@ -124,7 +116,6 @@ export default function CreatePage() {
       }
     };
   }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
-
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -192,18 +183,16 @@ export default function CreatePage() {
         candidates,
         candidateCount: candidates.length,
         lastModified: 'Today',
-        isDraft: false, // This is a confirmed save, so it's not a draft.
+        isDraft: false,
     };
 
     const existingIndex = allShortlists.findIndex(s => s.id === currentId);
     let updatedShortlists;
 
     if (existingIndex > -1) {
-        // This updates a loaded shortlist OR promotes an auto-saved draft by explicitly replacing it.
         allShortlists[existingIndex] = shortlistData;
         updatedShortlists = allShortlists;
     } else {
-        // This handles a new shortlist that wasn't auto-saved.
         updatedShortlists = [...allShortlists, shortlistData];
     }
     
@@ -221,11 +210,10 @@ export default function CreatePage() {
         return;
     }
     setIsGeneratingSuggestions(true);
-    setSuggestedSkills([]); // Clear previous suggestions
+    setSuggestedSkills([]);
     try {
         const result = await suggestSkills({ jobDescription });
         if (result && result.skills) {
-            // Filter out skills that are already in the parameters list
             const newSuggestions = result.skills.filter(suggestedSkill => 
                 !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
             );
@@ -633,5 +621,17 @@ export default function CreatePage() {
         © {new Date().getFullYear()} ResumeRank. Advanced Resume Screening.
       </footer>
     </div>
+  );
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <CreatePageContent />
+    </Suspense>
   );
 }
