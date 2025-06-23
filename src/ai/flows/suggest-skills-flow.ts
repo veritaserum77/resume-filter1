@@ -31,6 +31,14 @@ const suggestSkillsPrompt = ai.definePrompt({
   name: 'suggestSkillsPrompt',
   input: { schema: SuggestSkillsInputSchema },
   output: { schema: SuggestSkillsOutputSchema },
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+    ],
+  },
   prompt: `You are an expert recruitment assistant. Analyze the following job description and identify the most important skills required for the role.
 Focus on concrete, specific skills (e.g., "React", "Python", "Project Management", "Go", "SQL") rather than generic phrases.
 Extract a list of 5 to 10 key skills.
