@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Mail, Lock, User } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -17,17 +18,43 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
   const [otp, setOtp] = useState('');
+  const [mockOtp, setMockOtp] = useState('');
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // Open the OTP dialog instead of navigating directly
+    // Generate a mock 6-digit OTP
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    setMockOtp(generatedOtp);
+    
+    // For demonstration purposes, we'll show the OTP in a toast.
+    // In a real app, this would be sent via email or SMS.
+    toast({
+      title: "OTP Generated (For Demo)",
+      description: `Your one-time password is: ${generatedOtp}`,
+    });
+
+    // Open the OTP dialog
     setIsOtpDialogOpen(true);
   };
 
   const handleVerifyOtp = () => {
-    // No actual verification, just navigate to dashboard on OTP submission
-    router.push('/dashboard');
+    if (otp === mockOtp) {
+      toast({
+        title: "Success!",
+        description: "Account verified. Redirecting to dashboard...",
+        className: "bg-accent text-accent-foreground",
+      });
+      router.push('/dashboard');
+    } else {
+      toast({
+        title: "Invalid OTP",
+        description: "The OTP you entered is incorrect. Please try again.",
+        variant: "destructive",
+      });
+      setOtp(''); // Clear the input for another attempt
+    }
   };
 
   return (
