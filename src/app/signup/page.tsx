@@ -9,16 +9,24 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Lock, User } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
+  const [otp, setOtp] = useState('');
   const router = useRouter();
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // No actual authentication or user creation, just navigate to dashboard
+    // Open the OTP dialog instead of navigating directly
+    setIsOtpDialogOpen(true);
+  };
+
+  const handleVerifyOtp = () => {
+    // No actual verification, just navigate to dashboard on OTP submission
     router.push('/dashboard');
   };
 
@@ -96,6 +104,34 @@ export default function SignupPage() {
       <footer className="absolute bottom-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} ResumeRank. All rights reserved.
       </footer>
+
+      <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify Your Account</DialogTitle>
+            <DialogDescription>
+              An OTP has been sent to your email. Please enter it below to complete your registration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="otp">One-Time Password</Label>
+              <Input
+                id="otp"
+                type="text"
+                placeholder="Enter your 6-digit OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOtpDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleVerifyOtp}>Verify & Sign Up</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
