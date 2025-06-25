@@ -209,37 +209,36 @@ function CreatePageContent() {
 
     // Submit JD to backend
     try {
-      const token = localStorage.getItem('auth_token'); // Replace with your token retrieval logic
-      if (!token) {
-        toast({ title: "Authentication Error", description: "No authentication token found. Please log in.", variant: "destructive" });
-        return;
-      }
+  const token = localStorage.getItem('token');
+  if (!token) {
+    toast({ title: "Authentication Error", description: "No authentication token found. Please log in.", variant: "destructive" });
+    return;
+  }
 
-      const response = await fetch('/api/job-descriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          shortlistId: currentId,
-          title: shortlistTitle,
-          jobTitle,
-          jobDescription,
-          parameters,
-        }),
-      });
+  const response = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      job_title: jobTitle,
+      job_description: jobDescription,
+      skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+    }),
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit job description');
-      }
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to submit job description');
+  }
 
-      toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`, className: "bg-accent text-accent-foreground" });
-    } catch (error) {
-      console.error('Error submitting job description:', error);
-      toast({ title: "Submission Failed", description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`, variant: "destructive" });
-    }
+  toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`, className: "bg-accent text-accent-foreground" });
+} catch (error) {
+  console.error('Error submitting job description:', error);
+  toast({ title: "Submission Failed", description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`, variant: "destructive" });
+}
+
   };
 
   const handleGenerateSuggestions = async () => {
