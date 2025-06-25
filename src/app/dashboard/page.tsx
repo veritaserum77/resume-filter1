@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Shortlist[]>([]);
   const { toast } = useToast();
 
-  const loadShortlists = async () => {
+  const loadDrafts = () => {
     const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
     let allShortlists: Shortlist[] = [];
     if (storedShortlistsJSON) {
@@ -84,40 +84,43 @@ export default function DashboardPage() {
         allShortlists = JSON.parse(storedShortlistsJSON);
       } catch (error) {
         console.error("Failed to parse shortlists from localStorage", error);
+        allShortlists = [];
         localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
       }
     }
-
     setDrafts(allShortlists.filter(s => s.isDraft));
-
-    const token = localStorage.getItem('resumerank_token');
-    if (token) {
-      try {
-        const { history } = await getJDHistory(token);
-        const backendShortlists: Shortlist[] = history.map(jd => ({
-          id: jd.jd_id,
-          title: jd.job_title,
-          jobTitle: jd.job_title,
-          candidateCount: 0,
-          lastModified: 'Just Now',
-          isDraft: false
-        }));
-        setShortlists(backendShortlists);
-      } catch (error) {
-        console.error("Failed to fetch JD history from backend", error);
-      }
-    }
   };
 
   useEffect(() => {
-    loadShortlists();
+    const fetchServerShortlists = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const data = await getJDHistory(token);
+        const serverShortlists = data.history.map((item: any) => ({
+          id: item.jd_id,
+          title: item.job_title,
+          jobTitle: item.job_title,
+          candidateCount: 0,
+          lastModified: new Date().toLocaleDateString(),
+          isDraft: false,
+        }));
+        setShortlists(serverShortlists);
+      } catch (error) {
+        console.error("Failed to fetch shortlists from backend", error);
+      }
+    };
+
+    fetchServerShortlists();
+    loadDrafts();
   }, []);
 
   const handleDelete = (id: string, title: string) => {
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const updatedShortlists = allShortlists.filter(s => s.id !== id);
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    loadShortlists();
+    loadDrafts();
     toast({
       title: "Shortlist Deleted",
       description: `The shortlist "${title}" has been removed.`,
