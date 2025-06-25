@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
-import type { Candidate, SkillParameter, Shortlist } from '@/lib/types'; 
+import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
@@ -88,7 +88,6 @@ function CreatePageContent() {
       const currentId = shortlistId || tempId;
       const existingItem = allShortlists.find(s => s.id === currentId);
 
-      // If the shortlist is already confirmed and saved, don't create a draft.
       if (existingItem && !existingItem.isDraft) {
         return;
       }
@@ -121,7 +120,6 @@ function CreatePageContent() {
       }
     };
   }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
-
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -170,80 +168,113 @@ function CreatePageContent() {
     }
   };
 
-  const handleConfirmAndSave = () => {
+  const handleConfirmAndSave = async () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
       toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
       return;
     }
+
     setConfirmedParameters([...parameters]);
 
-    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const currentId = shortlistId || tempId;
-
     const shortlistData: Shortlist = {
-        id: currentId,
-        title: shortlistTitle,
-        jobTitle,
-        jobDescription,
-        parameters,
-        candidates,
-        candidateCount: candidates.length,
-        lastModified: 'Today',
-        isDraft: false,
+      id: currentId,
+      title: shortlistTitle,
+      jobTitle,
+      jobDescription,
+      parameters,
+      candidates,
+      candidateCount: candidates.length,
+      lastModified: 'Today',
+      isDraft: false,
     };
 
+    // Save to localStorage
+    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const existingIndex = allShortlists.findIndex(s => s.id === currentId);
     let updatedShortlists;
 
     if (existingIndex > -1) {
-        allShortlists[existingIndex] = shortlistData;
-        updatedShortlists = allShortlists;
+      allShortlists[existingIndex] = shortlistData;
+      updatedShortlists = allShortlists;
     } else {
-        updatedShortlists = [...allShortlists, shortlistData];
+      updatedShortlists = [...allShortlists, shortlistData];
     }
     
     if (!shortlistId) {
-        setShortlistId(currentId);
+      setShortlistId(currentId);
     }
     
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved.`, className: "bg-accent text-accent-foreground" });
+
+    // Submit JD to backend
+    try {
+      const token = localStorage.getItem('auth_token'); // Replace with your token retrieval logic
+      if (!token) {
+        toast({ title: "Authentication Error", description: "No authentication token found. Please log in.", variant: "destructive" });
+        return;
+      }
+
+      const response = await fetch('/api/job-descriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          shortlistId: currentId,
+          title: shortlistTitle,
+          jobTitle,
+          jobDescription,
+          parameters,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit job description');
+      }
+
+      toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`, className: "bg-accent text-accent-foreground" });
+    } catch (error) {
+      console.error('Error submitting job description:', error);
+      toast({ title: "Submission Failed", description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`, variant: "destructive' });
+    }
   };
 
   const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
-        toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
-        return;
+      toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
+      return;
     }
     setIsGeneratingSuggestions(true);
     setSuggestedSkills([]);
     try {
-        const result = await suggestSkills({ jobDescription });
-        if (result && result.skills) {
-            const newSuggestions = result.skills.filter(suggestedSkill => 
-                !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
-            );
-            setSuggestedSkills(newSuggestions);
-            if (newSuggestions.length > 0) {
-                toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
-            } else if (result.skills.length > 0) {
-                toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
-            } else {
-                 toast({ title: "No New Suggestions", description: "The AI could not find any skills to suggest.", variant: "default" });
-            }
+      const result = await suggestSkills({ jobDescription });
+      if (result && result.skills) {
+        const newSuggestions = result.skills.filter(suggestedSkill => 
+          !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
+        );
+        setSuggestedSkills(newSuggestions);
+        if (newSuggestions.length > 0) {
+          toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
+        } else if (result.skills.length > 0) {
+          toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
+        } else {
+          toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
         }
-    } catch (error) {
-        console.error("Error generating skill suggestions:", error);
+      } catch (error) {
+        console.error("Failed to generate skill suggestions:", error);
         toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
-    } finally {
+      } finally {
         setIsGeneratingSuggestions(false);
-    }
-  };
+      }
+    };
 
   const handleAddSuggestedSkill = (skillName: string) => {
     if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
-        toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
-        return;
+      toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
+      return;
     }
     setNewParamName(skillName);
     setSuggestedSkills(prev => prev.filter(s => s !== skillName));
@@ -630,7 +661,6 @@ function CreatePageContent() {
   );
 }
 
-
 export default function CreatePage() {
   return (
     <Suspense fallback={
@@ -641,4 +671,4 @@ export default function CreatePage() {
       <CreatePageContent />
     </Suspense>
   );
-} 
+}
