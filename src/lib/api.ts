@@ -1,7 +1,7 @@
 const BASE_URL = "https://backend-f2yv.onrender.com";
 
 // ✅ Signup - sends OTP
-export async function signupInit(name, email, password) {
+export async function signupInit(name: string, email: string, password: string) {
   const res = await fetch(`${BASE_URL}/auth/signup/init`, {
     method: "POST",
     headers: {
@@ -11,15 +11,15 @@ export async function signupInit(name, email, password) {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || "Signup failed");
+    const error = await safeParseError(res);
+    throw new Error(error || "Signup failed");
   }
 
   return res.json(); // { message: "...", etc }
 }
 
 // ✅ Verify OTP and complete signup
-export async function verifySignup(email, otp) {
+export async function verifySignup(email: string, otp: string) {
   const res = await fetch(`${BASE_URL}/auth/signup/verify`, {
     method: "POST",
     headers: {
@@ -29,15 +29,15 @@ export async function verifySignup(email, otp) {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || "OTP verification failed");
+    const error = await safeParseError(res);
+    throw new Error(error || "OTP verification failed");
   }
 
-  return res.json();
+  return res.json(); // { message: "...", etc }
 }
 
 // ✅ Login
-export async function login(email, password) {
+export async function login(email: string, password: string) {
   const res = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
     headers: {
@@ -47,15 +47,15 @@ export async function login(email, password) {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || "Login failed");
+    const error = await safeParseError(res);
+    throw new Error(error || "Login failed");
   }
 
   return res.json(); // { access_token, user_id, name }
 }
 
-// ✅ Submit a JD
-export async function submitJD(token, jdPayload) {
+// ✅ Submit a JD (Authenticated)
+export async function submitJD(token: string, jdPayload: { job_title: string, job_description: string, skills: Record<string, number> }) {
   const res = await fetch(`${BASE_URL}/jd/submit`, {
     method: "POST",
     headers: {
@@ -66,15 +66,15 @@ export async function submitJD(token, jdPayload) {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || "JD submission failed");
+    const error = await safeParseError(res);
+    throw new Error(error || "JD submission failed");
   }
 
   return res.json(); // { message, jd_id }
 }
 
-// ✅ Get JD History
-export async function getJDHistory(token) {
+// ✅ Fetch JD history (Authenticated)
+export async function getJDHistory(token: string) {
   const res = await fetch(`${BASE_URL}/jd/history`, {
     method: "GET",
     headers: {
@@ -83,9 +83,19 @@ export async function getJDHistory(token) {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || "Failed to fetch JD history");
+    const error = await safeParseError(res);
+    throw new Error(error || "Failed to fetch JD history");
   }
 
   return res.json(); // { history: [...] }
+}
+
+// 🔒 Utility: Safe error parser
+async function safeParseError(res: Response) {
+  try {
+    const err = await res.json();
+    return err.detail || JSON.stringify(err);
+  } catch {
+    return res.statusText;
+  }
 }
