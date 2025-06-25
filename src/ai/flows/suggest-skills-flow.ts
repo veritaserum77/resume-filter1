@@ -39,16 +39,18 @@ const suggestSkillsPrompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `You are an expert recruitment assistant. Analyze the following job description and identify the most important skills required for the role.
-Focus on concrete, specific skills (e.g., "React", "Python", "Project Management", "Go", "SQL") rather than generic phrases.
-Extract a list of 5 to 10 key skills.
+  prompt: `You are an expert recruitment analyst AI with deep knowledge of job roles and technical skill requirements.
+
+Your task is to analyze the following job description and extract a concise list of the most **relevant, concrete, and technical skills** required for the role. Focus only on hard skills — tools, technologies, languages, and domain-specific expertise. Avoid generic terms like “communication” or “leadership.”
+
+Return a list of 5 to 10 **unique, specific skills**, using short standardized names (e.g., "Python", "SQL", "React", "AWS", "Project Management", "Data Analysis").
 
 Job Description:
 ---
 {{{jobDescription}}}
 ---
 
-Based on the description, provide the list of skills.`,
+Respond with only the list of skills in bullet points or array format.`,
 });
 
 const suggestSkillsFlow = ai.defineFlow(
