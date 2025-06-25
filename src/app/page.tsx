@@ -6,7 +6,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Mail, Lock } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
@@ -32,13 +39,14 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log('Login Response:', data); // 👈 Debugging
 
       if (!response.ok) {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // ✅ Store token securely and consistently
-      localStorage.setItem('accessToken', data.access_token);
+      // ✅ Store token consistently as "token"
+      localStorage.setItem('token', data.access_token);
       localStorage.setItem('user_id', data.user_id);
       localStorage.setItem('name', data.name);
 
@@ -52,7 +60,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: 'Login failed',
-        description: error.message,
+        description: error.message || 'An error occurred during login.',
         variant: 'destructive',
       });
     } finally {
