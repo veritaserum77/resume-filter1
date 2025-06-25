@@ -37,8 +37,8 @@ export default function LoginPage() {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // Save token and user info (can improve with localStorage or session)
-      localStorage.setItem('token', data.access_token);
+      // ✅ Store token securely and consistently
+      localStorage.setItem('accessToken', data.access_token);
       localStorage.setItem('user_id', data.user_id);
       localStorage.setItem('name', data.name);
 
@@ -102,7 +102,11 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={loading}
+            >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
