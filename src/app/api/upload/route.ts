@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'; // Ensure Node.js instead of Edge
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
@@ -5,7 +7,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const files = formData.getAll('files') as File[];
 
-  const uploadResults = await Promise.all(files.map(async (file) => {
+  const uploads = await Promise.all(files.map(async (file) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const fileName = `${Date.now()}-${file.name}`;
@@ -25,5 +27,5 @@ export async function POST(req: NextRequest) {
     };
   }));
 
-  return NextResponse.json({ uploads: uploadResults });
+  return NextResponse.json({ uploads });
 }
