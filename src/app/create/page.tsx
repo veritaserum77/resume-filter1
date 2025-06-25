@@ -5,7 +5,6 @@ import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
-import { getToken } from '@/lib/auth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +29,6 @@ function CreatePageContent() {
   const [shortlistId, setShortlistId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [tempId] = useState(() => `sl-${Date.now()}`);
-  const [isSubmittingJD, setIsSubmittingJD] = useState(false);
 
   // Shortlist-specific state
   const [shortlistTitle, setShortlistTitle] = useState('');
@@ -59,48 +57,7 @@ function CreatePageContent() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
   const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
-
-  const handleSubmitJobDescription = async () => {
-    if (!jobDescription.trim()) {
-      toast({ title: "Error", description: "Job description cannot be empty", variant: "destructive" });
-      return;
-    }
-
-    setIsSubmittingJD(true);
-    try {
-      const token = await getToken();
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/job-descriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: jobTitle,
-          description: jobDescription,
-          shortlistId: shortlistId || tempId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit job description');
-      }
-
-      const data = await response.json();
-      toast({ title: "Success", description: "Job description submitted successfully", className: "bg-accent text-accent-foreground" });
-      return data;
-    } catch (error) {
-      console.error('Error submitting job description:', error);
-      toast({ title: "Error", description: "Failed to submit job description", variant: "destructive" });
-    } finally {
-      setIsSubmittingJD(false);
-    }
-  };
-
+  
   // Load data on component mount
   useEffect(() => {
     const id = searchParams.get('id');
@@ -165,6 +122,7 @@ function CreatePageContent() {
     };
   }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
 
+
   // Update skill filters when confirmed parameters change
   useEffect(() => {
     if (!isLoaded) return;
@@ -212,7 +170,7 @@ function CreatePageContent() {
     }
   };
 
-  const handleConfirmAndSave = async () => {
+  const handleConfirmAndSave = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
       toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
       return;
@@ -249,14 +207,7 @@ function CreatePageContent() {
     }
     
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    
-    // Submit the job description to the backend
-    try {
-      await handleSubmitJobDescription();
-      toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved.`, className: "bg-accent text-accent-foreground" });
-    } catch (error) {
-      toast({ title: "Warning", description: "Shortlist saved locally but failed to sync with server", variant: "default" });
-    }
+    toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved.`, className: "bg-accent text-accent-foreground" });
   };
 
   const handleGenerateSuggestions = async () => {
@@ -466,19 +417,6 @@ function CreatePageContent() {
                 onChange={(e) => setJobDescription(e.target.value)}
                 className="min-h-[200px] lg:min-h-[270px] resize-y"
               />
-              <div className="mt-4 flex justify-end">
-                <Button 
-                  onClick={handleSubmitJobDescription}
-                  disabled={isSubmittingJD || !jobDescription.trim()}
-                >
-                  {isSubmittingJD ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileText className="mr-2 h-4 w-4" />
-                  )}
-                  Submit Job Description
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
@@ -692,6 +630,7 @@ function CreatePageContent() {
   );
 }
 
+
 export default function CreatePage() {
   return (
     <Suspense fallback={
@@ -702,4 +641,4 @@ export default function CreatePage() {
       <CreatePageContent />
     </Suspense>
   );
-}
+} 
