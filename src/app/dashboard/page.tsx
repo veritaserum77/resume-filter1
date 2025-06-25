@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -20,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getJDHistory } from '@/lib/api';
 
 const ShortlistCard = ({ shortlist, onDelete }: { shortlist: Shortlist; onDelete: () => void }) => {
   return (
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Shortlist[]>([]);
   const { toast } = useToast();
 
-  const loadShortlists = () => {
+  const loadShortlists = async () => {
     const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
     let allShortlists: Shortlist[] = [];
     if (storedShortlistsJSON) {
@@ -84,12 +84,29 @@ export default function DashboardPage() {
         allShortlists = JSON.parse(storedShortlistsJSON);
       } catch (error) {
         console.error("Failed to parse shortlists from localStorage", error);
-        allShortlists = [];
         localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
       }
     }
-    setShortlists(allShortlists.filter(s => !s.isDraft));
+
     setDrafts(allShortlists.filter(s => s.isDraft));
+
+    const token = localStorage.getItem('resumerank_token');
+    if (token) {
+      try {
+        const { history } = await getJDHistory(token);
+        const backendShortlists: Shortlist[] = history.map(jd => ({
+          id: jd.jd_id,
+          title: jd.job_title,
+          jobTitle: jd.job_title,
+          candidateCount: 0,
+          lastModified: 'Just Now',
+          isDraft: false
+        }));
+        setShortlists(backendShortlists);
+      } catch (error) {
+        console.error("Failed to fetch JD history from backend", error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -135,10 +152,10 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="text-center py-12 px-6 border-2 border-dashed rounded-lg bg-card">
-                <p className="text-muted-foreground mb-4">You haven't created any shortlists yet.</p>
-                <Button asChild>
-                    <Link href="/create">Create Your First Shortlist</Link>
-                </Button>
+              <p className="text-muted-foreground mb-4">You haven't created any shortlists yet.</p>
+              <Button asChild>
+                <Link href="/create">Create Your First Shortlist</Link>
+              </Button>
             </div>
           )}
         </section>
@@ -155,9 +172,9 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-             <div className="text-center py-12 px-6 border-2 border-dashed rounded-lg bg-card">
-                <p className="text-muted-foreground">You have no saved drafts.</p>
-             </div>
+            <div className="text-center py-12 px-6 border-2 border-dashed rounded-lg bg-card">
+              <p className="text-muted-foreground">You have no saved drafts.</p>
+            </div>
           )}
         </section>
       </main>
