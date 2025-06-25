@@ -238,7 +238,7 @@ function CreatePageContent() {
       toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`, className: "bg-accent text-accent-foreground" });
     } catch (error) {
       console.error('Error submitting job description:', error);
-      toast({ title: "Submission Failed", description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`, variant: "destructive' });
+      toast({ title: "Submission Failed", description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`, variant: "destructive" });
     }
   };
 
@@ -263,13 +263,14 @@ function CreatePageContent() {
         } else {
           toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
         }
-      } catch (error) {
-        console.error("Failed to generate skill suggestions:", error);
-        toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
-      } finally {
-        setIsGeneratingSuggestions(false);
       }
-    };
+    } catch (error) {
+      console.error("Failed to generate skill suggestions:", error);
+      toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
+  };
 
   const handleAddSuggestedSkill = (skillName: string) => {
     if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
