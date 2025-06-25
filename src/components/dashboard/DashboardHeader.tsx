@@ -15,7 +15,7 @@ export function DashboardHeader() {
     sessionStorage.clear(); 
 
     // Redirect to signup/login page
-    router.push('/page.tsx');
+    router.push('/');
   };
 
   return (
