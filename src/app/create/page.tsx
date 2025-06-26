@@ -96,46 +96,57 @@ function CreatePageContent() {
   }, [searchParams]);
 
   // Auto-save as draft on unmount
-  useEffect(() => {
-    return () => {
-      if (!isLoaded) return;
+useEffect(() => {
+  return () => {
+    if (!isLoaded) return;
 
-      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+    const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+    if (!hasContentToSaveAsDraft) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // Authenticated - save to backend
+      fetch('https://backend-f2yv.onrender.com/jd/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      }).catch((error) => {
+        console.error('Failed to save draft to backend:', error);
+      });
+    } else {
+      // Fallback to localStorage if unauthenticated
       const currentId = shortlistId || tempId;
-      const existingItem = allShortlists.find(s => s.id === currentId);
+      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
 
-      if (existingItem && !existingItem.isDraft) {
-        return;
-      }
+      const draftData: Shortlist = {
+        id: currentId,
+        title: shortlistTitle || 'Untitled Shortlist',
+        jobTitle: jobTitle || 'Untitled Job',
+        jobDescription: jobDescription,
+        parameters: parameters,
+        candidates: candidates,
+        candidateCount: candidates.length,
+        lastModified: 'Today',
+        isDraft: true,
+      };
 
-      const isNewUnsavedShortlist = !shortlistId;
-      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+      const existingIndex = allShortlists.findIndex(s => s.id === currentId);
+      const updatedShortlists = existingIndex > -1
+        ? allShortlists.map(s => s.id === currentId ? draftData : s)
+        : [...allShortlists, draftData];
 
-      if ((isNewUnsavedShortlist || (existingItem && existingItem.isDraft)) && hasContentToSaveAsDraft) {
-        const draftData: Shortlist = {
-          id: currentId,
-          title: shortlistTitle || 'Untitled Shortlist',
-          jobTitle: jobTitle || 'Untitled Job',
-          jobDescription: jobDescription,
-          parameters: parameters,
-          candidates: candidates,
-          candidateCount: candidates.length,
-          lastModified: 'Today',
-          isDraft: true,
-        };
+      localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    }
+  };
+}, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
 
-        const existingDraftIndex = allShortlists.findIndex(s => s.id === currentId);
-        let updatedShortlists;
-        if (existingDraftIndex > -1) {
-          updatedShortlists = allShortlists.map(s => s.id === currentId ? draftData : s);
-        } else {
-          updatedShortlists = [...allShortlists, draftData];
-        }
-
-        localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-      }
-    };
-  }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
