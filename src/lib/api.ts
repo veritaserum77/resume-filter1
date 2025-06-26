@@ -73,6 +73,25 @@ export async function submitJD(token: string, jdPayload: { job_title: string, jo
   return res.json(); // { message, jd_id }
 }
 
+// ✅ Save JD as Draft (Authenticated)
+export async function saveJDDraft(token: string, jdPayload: { job_title: string, job_description: string, skills: Record<string, number> }) {
+  const res = await fetch(`${BASE_URL}/jd/draft`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(jdPayload),
+  });
+
+  if (!res.ok) {
+    const error = await safeParseError(res);
+    throw new Error(error || "Saving draft failed");
+  }
+
+  return res.json(); // { message, jd_id }
+}
+
 // ✅ Fetch JD history (Authenticated)
 export async function getJDHistory(token: string) {
   const res = await fetch(`${BASE_URL}/jd/history`, {
