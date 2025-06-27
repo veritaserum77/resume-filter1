@@ -30,7 +30,7 @@ export function DashboardHeader() {
         <Logo />
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground hidden sm:inline">
-            {name ? `Welcome, ${name}` : 'Welcome!'}
+            {name ? `Welcome ${name}` : 'Welcome!'}
           </span>
           <Avatar className="h-8 w-8">
             <AvatarImage src="https://placehold.co/40x40.png" alt="User Avatar" />
