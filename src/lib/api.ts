@@ -109,6 +109,23 @@ export async function getJDHistory(token: string) {
   return res.json(); // { history: [...] }
 }
 
+// ✅ Fetch User Profile (Authenticated)
+export async function getUserProfile(token: string) {
+  const res = await fetch(`${BASE_URL}/auth/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await safeParseError(res);
+    throw new Error(error || "Failed to fetch user profile");
+  }
+
+  return res.json(); // { user_id, name, email }
+}
+
 // 🔒 Utility: Safe error parser
 async function safeParseError(res: Response) {
   try {
