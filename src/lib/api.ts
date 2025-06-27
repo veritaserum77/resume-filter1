@@ -126,6 +126,23 @@ export async function getUserProfile(token: string) {
   return res.json(); // { user_id, name, email }
 }
 
+// ✅ Delete a JD (Authenticated)
+export async function deleteJD(token: string, jdId: string) {
+  const res = await fetch(`${BASE_URL}/jd/delete/${jdId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await safeParseError(res);
+    throw new Error(error || "Failed to delete JD");
+  }
+
+  return res.json(); // { message: "JD deleted successfully" }
+}
+
 // 🔒 Utility: Safe error parser
 async function safeParseError(res: Response) {
   try {
