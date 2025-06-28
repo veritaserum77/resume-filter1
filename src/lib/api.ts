@@ -92,7 +92,7 @@ export async function saveJDDraft(token: string, jdPayload: { job_title: string,
   return res.json(); // { message, jd_id }
 }
 
-// ✅ Fetch JD history (Authenticated) - Updated to return history array directly
+// ✅ Fetch JD history (Authenticated)
 export async function getJDHistory(token: string) {
   const res = await fetch(`${BASE_URL}/jd/history`, {
     method: "GET",
@@ -106,8 +106,7 @@ export async function getJDHistory(token: string) {
     throw new Error(error || "Failed to fetch JD history");
   }
 
-  const data = await res.json(); // { history: [...] }
-  return data.history; // Return the history array directly
+  return res.json(); // { history: [...] }
 }
 
 // ✅ Fetch User Profile (Authenticated)
