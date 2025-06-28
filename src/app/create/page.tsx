@@ -79,14 +79,58 @@ function CreatePageContent() {
     const id = searchParams.get('id');
     if (id) {
       setShortlistId(id);
-      // Note: Since we're removing local storage, this will rely on backend data if available
-      // For now, this is a placeholder; you'd need to fetch from your backend API
-      // Example: fetchShortlistFromBackend(id).then(data => { setShortlistTitle(data.title); ... });
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetchShortlistHistory(token);
+      } else {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to view the shortlist.",
+          variant: "destructive",
+        });
+        router.push('/dashboard');
+      }
     } else {
       setIsNewShortlistModalOpen(true);
     }
     setIsLoaded(true);
-  }, [searchParams]);
+  }, [searchParams, router]);
+
+  const fetchShortlistHistory = async (token: string) => {
+    try {
+      const res = await fetch('https://backend-f2yv.onrender.com/jd/history', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch shortlist history');
+      }
+
+      const shortlists: Shortlist[] = await res.json();
+      const selectedShortlist = shortlists.find(s => s.id === shortlistId);
+      if (selectedShortlist) {
+        setShortlistTitle(selectedShortlist.title || '');
+        setJobTitle(selectedShortlist.jobTitle || '');
+        setJobDescription(selectedShortlist.jobDescription || '');
+        setParameters(selectedShortlist.parameters || INITIAL_PARAMETERS);
+        setConfirmedParameters(selectedShortlist.parameters || INITIAL_PARAMETERS);
+        setCandidates(selectedShortlist.candidates || []);
+      } else {
+        throw new Error('Shortlist not found');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Could not load shortlist: ${error.message}`,
+        variant: "destructive",
+      });
+      router.push('/dashboard');
+    }
+  };
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -151,7 +195,7 @@ function CreatePageContent() {
       parameters,
       candidates,
       candidateCount: candidates.length,
-      lastModified: '2025-06-28 12:47 PM IST',
+      lastModified: '2025-06-28 01:05 PM IST',
       isDraft: false,
     };
 
@@ -190,7 +234,7 @@ function CreatePageContent() {
         className: "bg-accent text-accent-foreground",
       });
       setShortlistId(shortlistData.id);
-      router.push('/dashboard'); // Redirect to dashboard after successful save
+      router.push('/dashboard');
     } catch (error: any) {
       toast({
         title: "Submission Failed",
