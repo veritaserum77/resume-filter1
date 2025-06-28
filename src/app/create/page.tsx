@@ -79,16 +79,9 @@ function CreatePageContent() {
     const id = searchParams.get('id');
     if (id) {
       setShortlistId(id);
-      const storedShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-      const data = storedShortlists.find(s => s.id === id);
-      if (data) {
-        setShortlistTitle(data.title);
-        setJobTitle(data.jobTitle);
-        setJobDescription(data.jobDescription);
-        setParameters(data.parameters);
-        setConfirmedParameters(data.parameters);
-        setCandidates(data.candidates);
-      }
+      // Note: Since we're removing local storage, this will rely on backend data if available
+      // For now, this is a placeholder; you'd need to fetch from your backend API
+      // Example: fetchShortlistFromBackend(id).then(data => { setShortlistTitle(data.title); ... });
     } else {
       setIsNewShortlistModalOpen(true);
     }
@@ -150,65 +143,59 @@ function CreatePageContent() {
 
     setConfirmedParameters([...parameters]);
 
-    const currentId = shortlistId || tempId;
     const shortlistData: Shortlist = {
-      id: currentId,
+      id: shortlistId || tempId,
       title: shortlistTitle,
       jobTitle,
       jobDescription,
       parameters,
       candidates,
       candidateCount: candidates.length,
-      lastModified: '2025-06-28 12:40 PM IST',
+      lastModified: '2025-06-28 12:47 PM IST',
       isDraft: false,
     };
 
-    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    const existingIndex = allShortlists.findIndex(s => s.id === currentId);
-    const updatedShortlists = existingIndex > -1
-      ? allShortlists.map(s => s.id === currentId ? shortlistData : s)
-      : [...allShortlists, shortlistData];
-    localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            job_title: jobTitle,
-            job_description: jobDescription,
-            skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
-          }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || 'Submission failed');
-        }
-
-        toast({
-          title: "Submitted Successfully",
-          description: `Shortlist "${shortlistTitle}" saved to backend.`,
-          className: "bg-accent text-accent-foreground",
-        });
-        setShortlistId(currentId);
-      } catch (error: any) {
-        toast({
-          title: "Submission Failed",
-          description: `Saved locally but failed to send to backend: ${error.message}`,
-          variant: "destructive",
-        });
-      }
-    } else {
+    if (!token) {
       toast({
-        title: "Saved Locally",
-        description: `Shortlist "${shortlistTitle}" saved locally as a shortlist.`,
+        title: "Authentication Required",
+        description: "Please log in to save the shortlist to the database.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Submission failed');
+      }
+
+      toast({
+        title: "Submitted Successfully",
+        description: `Shortlist "${shortlistTitle}" saved to database.`,
         className: "bg-accent text-accent-foreground",
+      });
+      setShortlistId(shortlistData.id);
+      router.push('/dashboard'); // Redirect to dashboard after successful save
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: `Failed to save to database: ${error.message}`,
+        variant: "destructive",
       });
     }
   };
