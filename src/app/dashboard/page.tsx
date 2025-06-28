@@ -58,16 +58,9 @@ export default function DashboardPage() {
 
   const loadDrafts = () => {
     const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
-    let allShortlists: Shortlist[] = [];
-    if (storedShortlistsJSON) {
-      try {
-        allShortlists = JSON.parse(storedShortlistsJSON);
-      } catch (error) {
-        console.error("Failed to parse shortlists from localStorage", error);
-        allShortlists = [];
-        localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
-      }
-    }
+    const allShortlists: Shortlist[] = storedShortlistsJSON
+      ? JSON.parse(storedShortlistsJSON)
+      : [];
     setDrafts(allShortlists.filter(s => s.isDraft));
   };
 
