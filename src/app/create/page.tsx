@@ -96,56 +96,57 @@ function CreatePageContent() {
   }, [searchParams]);
 
   // Auto-save as draft on unmount
-  useEffect(() => {
-    return () => {
-      if (!isLoaded) return;
+useEffect(() => {
+  return () => {
+    if (!isLoaded) return;
 
-      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
-      if (!hasContentToSaveAsDraft) return;
+    const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+    if (!hasContentToSaveAsDraft) return;
 
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        // Authenticated - save to backend
-        fetch('https://backend-f2yv.onrender.com/jd/draft', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            job_title: jobTitle,
-            job_description: jobDescription,
-            skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
-          }),
-        }).catch((error) => {
-          console.error('Failed to save draft to backend:', error);
-        });
-      } else {
-        // Fallback to localStorage if unauthenticated
-        const currentId = shortlistId || tempId;
-        const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // Authenticated - save to backend
+      fetch('https://backend-f2yv.onrender.com/jd/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      }).catch((error) => {
+        console.error('Failed to save draft to backend:', error);
+      });
+    } else {
+      // Fallback to localStorage if unauthenticated
+      const currentId = shortlistId || tempId;
+      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
 
-        const draftData: Shortlist = {
-          id: currentId,
-          title: shortlistTitle || 'Untitled Shortlist',
-          jobTitle: jobTitle || 'Untitled Job',
-          jobDescription: jobDescription,
-          parameters: parameters,
-          candidates: candidates,
-          candidateCount: candidates.length,
-          lastModified: 'Today',
-          isDraft: true,
-        };
+      const draftData: Shortlist = {
+        id: currentId,
+        title: shortlistTitle || 'Untitled Shortlist',
+        jobTitle: jobTitle || 'Untitled Job',
+        jobDescription: jobDescription,
+        parameters: parameters,
+        candidates: candidates,
+        candidateCount: candidates.length,
+        lastModified: 'Today',
+        isDraft: true,
+      };
 
-        const existingIndex = allShortlists.findIndex(s => s.id === currentId);
-        const updatedShortlists = existingIndex > -1
-          ? allShortlists.map(s => s.id === currentId ? draftData : s)
-          : [...allShortlists, draftData];
+      const existingIndex = allShortlists.findIndex(s => s.id === currentId);
+      const updatedShortlists = existingIndex > -1
+        ? allShortlists.map(s => s.id === currentId ? draftData : s)
+        : [...allShortlists, draftData];
 
-        localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-      }
-    };
-  }, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
+      localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    }
+  };
+}, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
+
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -273,55 +274,6 @@ function CreatePageContent() {
       toast({
         title: "Submission Failed",
         description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteShortlist = async () => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this shortlist?");
-    if (!confirmDelete || !shortlistId) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast({
-          title: "Authentication Error",
-          description: "You must be logged in to delete a shortlist.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Call backend delete endpoint
-      const res = await fetch(`https://backend-f2yv.onrender.com/jd/delete/${shortlistId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to delete shortlist.");
-      }
-
-      // Remove from localStorage
-      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem("resumerank_shortlists") || "[]");
-      const updated = allShortlists.filter(s => s.id !== shortlistId);
-      localStorage.setItem("resumerank_shortlists", JSON.stringify(updated));
-
-      toast({
-        title: "Shortlist Deleted",
-        description: `Shortlist "${shortlistTitle}" has been deleted.`,
-        className: "bg-destructive text-destructive-foreground",
-      });
-
-      router.push("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Deletion Failed",
-        description: error.message,
         variant: "destructive",
       });
     }
@@ -613,15 +565,10 @@ function CreatePageContent() {
           </Card>
         )}
 
-        <div className="flex justify-center my-6 gap-4">
+        <div className="flex justify-center my-6">
           <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
             <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
           </Button>
-          {shortlistId && (
-            <Button onClick={handleDeleteShortlist} size="lg" variant="destructive" className="w-full max-w-xs">
-              <Trash2 className="mr-2 h-5 w-5" /> Delete Shortlist
-            </Button>
-          )}
         </div>
 
         {/* Candidate Scores Card */}
@@ -772,4 +719,3 @@ export default function CreatePage() {
       <CreatePageContent />
     </Suspense>
   );
-}
