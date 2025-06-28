@@ -1,3 +1,5 @@
+
+4.6s
 'use client';
 
 import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
@@ -96,65 +98,59 @@ function CreatePageContent() {
   }, [searchParams]);
 
   // Auto-save as draft on unmount
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  return () => {
+    if (!isLoaded) return;
 
-    const saveDraft = async () => {
-      if (!isLoaded || !isMounted) return;
+    const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+    if (!hasContentToSaveAsDraft) return;
 
-      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
-      if (!hasContentToSaveAsDraft) return;
+    const token = localStorage.getItem('token');
 
-      const token = localStorage.getItem('token');
+    if (token && !shortlistId) {
+      // Authenticated - save to backend only if not submitted yet
+      fetch('https://backend-f2yv.onrender.com/jd/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      }).catch((error) => {
+        console.error('Failed to save draft to backend:', error);
+      });
+    } else {
+      // Fallback to localStorage if unauthenticated
+      const currentId = shortlistId || tempId;
+      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
 
-      if (token && !shortlistId) {
-        try {
-          await fetch('https://backend-f2yv.onrender.com/jd/draft', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              job_title: jobTitle,
-              job_description: jobDescription,
-              skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
-            }),
-          });
-        } catch (error) {
-          console.error('Failed to save draft to backend:', error);
-        }
-      } else {
-        const currentId = shortlistId || tempId;
-        const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+      const draftData: Shortlist = {
+        id: currentId,
+        title: shortlistTitle || 'Untitled Shortlist',
+        jobTitle: jobTitle || 'Untitled Job',
+        jobDescription: jobDescription,
+        parameters: parameters,
+        candidates: candidates,
+        candidateCount: candidates.length,
+        lastModified: 'Today',
+        isDraft: true,
+      };
 
-        const draftData: Shortlist = {
-          id: currentId,
-          title: shortlistTitle || 'Untitled Shortlist',
-          jobTitle: jobTitle || 'Untitled Job',
-          jobDescription: jobDescription,
-          parameters: parameters,
-          candidates: candidates,
-          candidateCount: candidates.length,
-          lastModified: '2025-06-28 12:30 PM IST', // Updated timestamp
-          isDraft: true,
-        };
+      const existingIndex = allShortlists.findIndex(s => s.id === currentId);
+      const updatedShortlists = existingIndex > -1
+        ? allShortlists.map(s => s.id === currentId ? draftData : s)
+        : [...allShortlists, draftData];
 
-        const existingIndex = allShortlists.findIndex(s => s.id === currentId);
-        const updatedShortlists = existingIndex > -1
-          ? allShortlists.map(s => s.id === currentId ? draftData : s)
-          : [...allShortlists, draftData];
+      localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    }
+  };
+}, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
 
-        localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-      }
-    };
 
-    saveDraft();
-
-    return () => {
-      isMounted = false; // Cleanup flag
-    };
-  }, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
@@ -204,42 +200,85 @@ function CreatePageContent() {
   };
 
   const handleConfirmAndSave = async () => {
-    if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
-      return;
+  if (!shortlistTitle.trim() || !jobTitle.trim()) {
+    toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
+    return;
+  }
+
+  setConfirmedParameters([...parameters]);
+
+  const shortlistData: Shortlist = {
+    id: shortlistId || tempId,
+    title: shortlistTitle,
+    jobTitle,
+    jobDescription,
+    parameters,
+    candidates,
+    candidateCount: candidates.length,
+    lastModified: 'Today',
+    isDraft: false,
+  };
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // Save locally if unauthenticated
+    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+    const existingIndex = allShortlists.findIndex(s => s.id === shortlistData.id);
+    const updated = existingIndex > -1
+      ? allShortlists.map(s => s.id === shortlistData.id ? shortlistData : s)
+      : [...allShortlists, shortlistData];
+
+    localStorage.setItem('resumerank_shortlists', JSON.stringify(updated));
+
+    toast({ title: "Saved Locally", description: "Shortlist saved locally as draft.", className: "bg-accent text-accent-foreground" });
+    return;
+  }
+
+  try {
+    const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        job_title: jobTitle,
+        job_description: jobDescription,
+        skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Submission failed');
     }
 
-    setConfirmedParameters([...parameters]);
+    // Remove local draft after successful backend submit
+    localStorage.setItem(
+      'resumerank_shortlists',
+      JSON.stringify(
+        (JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]') as Shortlist[]).filter(s => s.id !== shortlistData.id)
+      )
+    );
 
-    const shortlistData: Shortlist = {
-      id: shortlistId || tempId,
-      title: shortlistTitle,
-      jobTitle,
-      jobDescription,
-      parameters,
-      candidates,
-      candidateCount: candidates.length,
-      lastModified: '2025-06-28 12:30 PM IST', // Updated timestamp
-      isDraft: false,
-    };
+    toast({
+      title: "Submitted Successfully",
+      description: `Shortlist "${shortlistTitle}" saved to backend.`,
+      className: "bg-accent text-accent-foreground",
+    });
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // Save locally if unauthenticated
-      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-      const existingIndex = allShortlists.findIndex(s => s.id === shortlistData.id);
-      const updated = existingIndex > -1
-        ? allShortlists.map(s => s.id === shortlistData.id ? shortlistData : s)
-        : [...allShortlists, shortlistData];
+    setShortlistId(shortlistData.id); // Lock id after save
+  } catch (error: any) {
+    toast({
+      title: "Submission Failed",
+      description: `Saved locally but failed to send to backend: ${error.message}`,
+      variant: "destructive",
+    });
+  }
+};
 
-      localStorage.setItem('resumerank_shortlists', JSON.stringify(updated));
 
-      toast({ title: "Saved Locally", description: "Shortlist saved locally as draft.", className: "bg-accent text-accent-foreground" });
-      return;
-    }
-
-    try {
-      const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+      const response = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,30 +291,21 @@ function CreatePageContent() {
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Submission failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit job description');
       }
 
-      // Remove local draft after successful backend submit
-      localStorage.setItem(
-        'resumerank_shortlists',
-        JSON.stringify(
-          (JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]') as Shortlist[]).filter(s => s.id !== shortlistData.id)
-        )
-      );
-
       toast({
-        title: "Submitted Successfully",
-        description: `Shortlist "${shortlistTitle}" saved to backend.`,
+        title: "Success",
+        description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`,
         className: "bg-accent text-accent-foreground",
       });
-
-      setShortlistId(shortlistData.id); // Lock id after save
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error submitting job description:', error);
       toast({
         title: "Submission Failed",
-        description: `Saved locally but failed to send to backend: ${error.message}`,
+        description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -721,4 +751,3 @@ export default function CreatePage() {
       <CreatePageContent />
     </Suspense>
   );
-}
