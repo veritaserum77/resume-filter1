@@ -110,14 +110,20 @@ function CreatePageContent() {
         throw new Error('Failed to fetch shortlist history');
       }
 
-      const shortlists: Shortlist[] = await res.json();
-      const selectedShortlist = shortlists.find(s => s.id === shortlistId);
+      const shortlists: any[] = await res.json(); // Use 'any' to handle dynamic structure
+      const selectedShortlist = shortlists.find(s => s._id?.$oid === shortlistId);
       if (selectedShortlist) {
-        setShortlistTitle(selectedShortlist.title || '');
-        setJobTitle(selectedShortlist.jobTitle || '');
-        setJobDescription(selectedShortlist.jobDescription || '');
-        setParameters(selectedShortlist.parameters || INITIAL_PARAMETERS);
-        setConfirmedParameters(selectedShortlist.parameters || INITIAL_PARAMETERS);
+        setShortlistTitle(selectedShortlist.job_title || ''); // Using job_title as title
+        setJobTitle(selectedShortlist.job_title || '');
+        setJobDescription(selectedShortlist.job_description || '');
+        // Transform skills object into parameters array
+        const params: SkillParameter[] = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate unique id
+          name,
+          weight: typeof weight === 'object' && '$numberInt' in weight ? parseInt(weight.$numberInt) : (weight as number),
+        }));
+        setParameters(params);
+        setConfirmedParameters(params);
         setCandidates(selectedShortlist.candidates || []);
       } else {
         throw new Error('Shortlist not found');
@@ -195,7 +201,7 @@ function CreatePageContent() {
       parameters,
       candidates,
       candidateCount: candidates.length,
-      lastModified: '2025-06-28 01:05 PM IST',
+      lastModified: '2025-06-28 01:10 PM IST',
       isDraft: false,
     };
 
