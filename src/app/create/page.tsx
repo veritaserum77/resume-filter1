@@ -150,7 +150,7 @@ function CreatePageContent() {
   // Update skill filters when confirmed parameters change
   useEffect(() => {
     if (!isLoaded) return;
-    setMultFilters(prevFilters => {
+    setSkillFilters(prevFilters => {
       const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
       const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
 
@@ -190,7 +190,7 @@ function CreatePageContent() {
     const removedParam = parameters.find(p => p.id === id);
     setParameters(parameters.filter(p => p.id !== id));
     if (removedParam) {
-      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`, className: "bg-accent text-align-foreground" });
+      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
     }
   };
 
@@ -278,9 +278,7 @@ function CreatePageContent() {
     }
   };
 
-  const handleGenerate
-
-Suggestions = async () => {
+  const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
       toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
       return;
@@ -436,7 +434,7 @@ Suggestions = async () => {
             <DialogFooter>
               <Button variant="outline" onClick={() => router.push('/dashboard')}>Cancel</Button>
               <Button onClick={handleSetDetails}>Start Creating</Button>
-              </DialogFooter>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -625,7 +623,7 @@ Suggestions = async () => {
                         <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
                           {skillFilters.map((filter, index) => (
                             <div key={filter.skillName}>
-                              <Layer htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
+                              <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
                               <Input
                                 id={`skillFilterPopover-${filter.skillName}`}
                                 type="number"
