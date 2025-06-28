@@ -196,55 +196,83 @@ useEffect(() => {
   };
 
   const handleConfirmAndSave = async () => {
-    if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
-      return;
-    }
+  if (!shortlistTitle.trim() || !jobTitle.trim()) {
+    toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
+    return;
+  }
 
-    setConfirmedParameters([...parameters]);
+  setConfirmedParameters([...parameters]);
 
-    const currentId = shortlistId || tempId;
-    const shortlistData: Shortlist = {
-      id: currentId,
-      title: shortlistTitle,
-      jobTitle,
-      jobDescription,
-      parameters,
-      candidates,
-      candidateCount: candidates.length,
-      lastModified: 'Today',
-      isDraft: false,
-    };
+  const shortlistData: Shortlist = {
+    id: shortlistId || tempId,
+    title: shortlistTitle,
+    jobTitle,
+    jobDescription,
+    parameters,
+    candidates,
+    candidateCount: candidates.length,
+    lastModified: 'Today',
+    isDraft: false,
+  };
 
-    // Save to localStorage
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // Save locally if unauthenticated
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    const existingIndex = allShortlists.findIndex(s => s.id === currentId);
-    let updatedShortlists;
+    const existingIndex = allShortlists.findIndex(s => s.id === shortlistData.id);
+    const updated = existingIndex > -1
+      ? allShortlists.map(s => s.id === shortlistData.id ? shortlistData : s)
+      : [...allShortlists, shortlistData];
 
-    if (existingIndex > -1) {
-      allShortlists[existingIndex] = shortlistData;
-      updatedShortlists = allShortlists;
-    } else {
-      updatedShortlists = [...allShortlists, shortlistData];
+    localStorage.setItem('resumerank_shortlists', JSON.stringify(updated));
+
+    toast({ title: "Saved Locally", description: "Shortlist saved locally as draft.", className: "bg-accent text-accent-foreground" });
+    return;
+  }
+
+  try {
+    const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        job_title: jobTitle,
+        job_description: jobDescription,
+        skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Submission failed');
     }
 
-    if (!shortlistId) {
-      setShortlistId(currentId);
-    }
+    // Remove local draft after successful backend submit
+    localStorage.setItem(
+      'resumerank_shortlists',
+      JSON.stringify(
+        (JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]') as Shortlist[]).filter(s => s.id !== shortlistData.id)
+      )
+    );
 
-    localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    toast({
+      title: "Submitted Successfully",
+      description: `Shortlist "${shortlistTitle}" saved to backend.`,
+      className: "bg-accent text-accent-foreground",
+    });
 
-    // Submit JD to backend
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast({
-          title: "Authentication Error",
-          description: "No authentication token found. Please log in.",
-          variant: "destructive",
-        });
-        return;
-      }
+    setShortlistId(shortlistData.id); // Lock id after save
+  } catch (error: any) {
+    toast({
+      title: "Submission Failed",
+      description: `Saved locally but failed to send to backend: ${error.message}`,
+      variant: "destructive",
+    });
+  }
+};
+
 
       const response = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
         method: 'POST',
