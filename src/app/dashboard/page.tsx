@@ -3,51 +3,71 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, FileText, Users, Clock, Edit } from 'lucide-react';
+import { PlusCircle, FileText, Users, Clock, Edit, Trash2 } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import type { Shortlist } from '@/lib/types';
 import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getJDHistory } from '@/lib/api';
 
-const ShortlistCard = ({
-  shortlist,
-  onFinalize,
-}: {
-  shortlist: Shortlist;
-  onFinalize?: () => void;
-}) => {
+const ShortlistCard = ({ shortlist, onDelete }: { shortlist: Shortlist; onDelete: () => void }) => {
   return (
-    <Card className="hover:shadow-lg hover:border-primary/50 transition-all flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-xl font-headline">{shortlist.title}</CardTitle>
-        <CardDescription>{shortlist.jobTitle}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow flex items-center gap-6 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          <span>{shortlist.candidateCount} Candidates</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          <span>{shortlist.lastModified}</span>
-        </div>
-      </CardContent>
-      <CardFooter>
-        {shortlist.isDraft ? (
-          <Button onClick={onFinalize} className="w-full">
-            Finalize Draft
-          </Button>
-        ) : (
-          <Button asChild variant="outline" className="w-full">
-            <Link href={`/create?id=${shortlist.id}`}>
+    <AlertDialog>
+      <Card className="hover:shadow-lg hover:border-primary/50 transition-all flex flex-col">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline">{shortlist.title}</CardTitle>
+          <CardDescription>{shortlist.jobTitle}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span>{shortlist.candidateCount} Candidates</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>{shortlist.lastModified}</span>
+          </div>
+        </CardContent>
+        <CardFooter className="flex items-center justify-between gap-2">
+          <Button asChild variant="outline" className="flex-grow">
+            <Link href={/create?id=${shortlist.id}}>
               <Edit className="mr-2 h-4 w-4" />
-              View Shortlist
+              {shortlist.isDraft ? 'Continue Draft' : 'View Shortlist'}
             </Link>
           </Button>
-        )}
-      </CardFooter>
-    </Card>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="icon" className="flex-shrink-0" aria-label="Delete shortlist">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+        </CardFooter>
+      </Card>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the shortlist "{shortlist.title}".
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
@@ -58,9 +78,16 @@ export default function DashboardPage() {
 
   const loadDrafts = () => {
     const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
-    const allShortlists: Shortlist[] = storedShortlistsJSON
-      ? JSON.parse(storedShortlistsJSON)
-      : [];
+    let allShortlists: Shortlist[] = [];
+    if (storedShortlistsJSON) {
+      try {
+        allShortlists = JSON.parse(storedShortlistsJSON);
+      } catch (error) {
+        console.error("Failed to parse shortlists from localStorage", error);
+        allShortlists = [];
+        localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
+      }
+    }
     setDrafts(allShortlists.filter(s => s.isDraft));
   };
 
@@ -89,22 +116,14 @@ export default function DashboardPage() {
     loadDrafts();
   }, []);
 
-  const handleConvertDraft = (id: string, title: string) => {
+  const handleDelete = (id: string, title: string) => {
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    const updatedShortlists = allShortlists.map(s => {
-      if (s.id === id) {
-        return { ...s, isDraft: false };
-      }
-      return s;
-    });
-
+    const updatedShortlists = allShortlists.filter(s => s.id !== id);
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
     loadDrafts();
-    setShortlists(prev => [...prev, updatedShortlists.find(s => s.id === id)!]);
-
     toast({
-      title: "Draft Finalized",
-      description: `The draft "${title}" has been moved to your shortlists.`,
+      title: "Shortlist Deleted",
+      description: The shortlist "${title}" has been removed.,
       className: "bg-accent text-accent-foreground",
     });
   };
@@ -131,7 +150,7 @@ export default function DashboardPage() {
           {shortlists.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {shortlists.map(shortlist => (
-                <ShortlistCard key={shortlist.id} shortlist={shortlist} />
+                <ShortlistCard key={shortlist.id} shortlist={shortlist} onDelete={() => handleDelete(shortlist.id, shortlist.title)} />
               ))}
             </div>
           ) : (
@@ -152,11 +171,7 @@ export default function DashboardPage() {
           {drafts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {drafts.map(draft => (
-                <ShortlistCard
-                  key={draft.id}
-                  shortlist={draft}
-                  onFinalize={() => handleConvertDraft(draft.id, draft.title)}
-                />
+                <ShortlistCard key={draft.id} shortlist={draft} onDelete={() => handleDelete(draft.id, draft.title)} />
               ))}
             </div>
           ) : (
