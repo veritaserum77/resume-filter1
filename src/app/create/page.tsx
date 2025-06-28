@@ -13,7 +13,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, PlusCircle, ArrowUpDown, UploadCloud, FileText, Filter, Files, Search, CheckCircle, LinkIcon, Sparkles, Loader2, ClipboardList, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Trash2,
+  PlusCircle,
+  ArrowUpDown,
+  UploadCloud,
+  FileText,
+  Filter,
+  Files,
+  Search,
+  CheckCircle,
+  LinkIcon,
+  Sparkles,
+  Loader2,
+  ClipboardList,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +55,7 @@ function CreatePageContent() {
   // Staged vs. Confirmed parameters
   const [parameters, setParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
   const [confirmedParameters, setConfirmedParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
-  
+
   // Staging new parameters
   const [newParamName, setNewParamName] = useState('');
   const [newParamWeight, setNewParamWeight] = useState<number>(5);
@@ -49,7 +65,7 @@ function CreatePageContent() {
   // AI Suggestions
   const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
-  
+
   // Table state
   const [searchTerm, setSearchTerm] = useState('');
   const [overallScoreFilter, setOverallScoreFilter] = useState<number | ''>('');
@@ -57,7 +73,7 @@ function CreatePageContent() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
   const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
-  
+
   // Load data on component mount
   useEffect(() => {
     const id = searchParams.get('id');
@@ -80,47 +96,56 @@ function CreatePageContent() {
   }, [searchParams]);
 
   // Auto-save as draft on unmount
-  useEffect(() => {
-    return () => {
-      if (!isLoaded) return;
+useEffect(() => {
+  return () => {
+    if (!isLoaded) return;
 
-      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
+    const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+    if (!hasContentToSaveAsDraft) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // Authenticated - save to backend
+      fetch('https://backend-f2yv.onrender.com/jd/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      }).catch((error) => {
+        console.error('Failed to save draft to backend:', error);
+      });
+    } else {
+      // Fallback to localStorage if unauthenticated
       const currentId = shortlistId || tempId;
-      const existingItem = allShortlists.find(s => s.id === currentId);
+      const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
 
-      // If the shortlist is already confirmed and saved, don't create a draft.
-      if (existingItem && !existingItem.isDraft) {
-        return;
-      }
-      
-      const isNewUnsavedShortlist = !shortlistId;
-      const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
+      const draftData: Shortlist = {
+        id: currentId,
+        title: shortlistTitle || 'Untitled Shortlist',
+        jobTitle: jobTitle || 'Untitled Job',
+        jobDescription: jobDescription,
+        parameters: parameters,
+        candidates: candidates,
+        candidateCount: candidates.length,
+        lastModified: 'Today',
+        isDraft: true,
+      };
 
-      if ((isNewUnsavedShortlist || (existingItem && existingItem.isDraft)) && hasContentToSaveAsDraft) {
-        const draftData: Shortlist = {
-          id: currentId,
-          title: shortlistTitle || 'Untitled Shortlist',
-          jobTitle: jobTitle || 'Untitled Job',
-          jobDescription: jobDescription,
-          parameters: parameters,
-          candidates: candidates,
-          candidateCount: candidates.length,
-          lastModified: 'Today',
-          isDraft: true,
-        };
+      const existingIndex = allShortlists.findIndex(s => s.id === currentId);
+      const updatedShortlists = existingIndex > -1
+        ? allShortlists.map(s => s.id === currentId ? draftData : s)
+        : [...allShortlists, draftData];
 
-        const existingDraftIndex = allShortlists.findIndex(s => s.id === currentId);
-        let updatedShortlists;
-        if (existingDraftIndex > -1) {
-          updatedShortlists = allShortlists.map(s => s.id === currentId ? draftData : s);
-        } else {
-          updatedShortlists = [...allShortlists, draftData];
-        }
-        
-        localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-      }
-    };
-  }, [isLoaded, shortlistId, shortlistTitle, jobTitle, jobDescription, parameters, candidates, tempId]);
+      localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
+    }
+  };
+}, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
 
 
   // Update skill filters when confirmed parameters change
@@ -129,20 +154,20 @@ function CreatePageContent() {
     setSkillFilters(prevFilters => {
       const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
       const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
-      
+
       const updatedFilters = confirmedParameters.map(p => ({
         skillName: p.name,
         minScore: existingFiltersMap.get(p.name) ?? '',
       }));
-      
+
       return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
     });
   }, [confirmedParameters, isLoaded]);
 
   const handleSetDetails = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
-        toast({ title: "Details Required", description: "Please provide both a Shortlist Title and a Job Title to continue.", variant: "destructive" });
-        return;
+      toast({ title: "Details Required", description: "Please provide both a Shortlist Title and a Job Title to continue.", variant: "destructive" });
+      return;
     }
     setIsNewShortlistModalOpen(false);
   };
@@ -170,85 +195,129 @@ function CreatePageContent() {
     }
   };
 
-  const handleConfirmAndSave = () => {
+  const handleConfirmAndSave = async () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
       toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
       return;
     }
+
     setConfirmedParameters([...parameters]);
 
-    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const currentId = shortlistId || tempId;
-
     const shortlistData: Shortlist = {
-        id: currentId,
-        title: shortlistTitle,
-        jobTitle,
-        jobDescription,
-        parameters,
-        candidates,
-        candidateCount: candidates.length,
-        lastModified: 'Today',
-        isDraft: false,
+      id: currentId,
+      title: shortlistTitle,
+      jobTitle,
+      jobDescription,
+      parameters,
+      candidates,
+      candidateCount: candidates.length,
+      lastModified: 'Today',
+      isDraft: false,
     };
 
+    // Save to localStorage
+    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const existingIndex = allShortlists.findIndex(s => s.id === currentId);
     let updatedShortlists;
 
     if (existingIndex > -1) {
-        allShortlists[existingIndex] = shortlistData;
-        updatedShortlists = allShortlists;
+      allShortlists[existingIndex] = shortlistData;
+      updatedShortlists = allShortlists;
     } else {
-        updatedShortlists = [...allShortlists, shortlistData];
+      updatedShortlists = [...allShortlists, shortlistData];
     }
-    
+
     if (!shortlistId) {
-        setShortlistId(currentId);
+      setShortlistId(currentId);
     }
-    
+
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    toast({ title: "Success", description: `Shortlist "${shortlistTitle}" has been saved.`, className: "bg-accent text-accent-foreground" });
+
+    // Submit JD to backend
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "No authentication token found. Please log in.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: jobTitle,
+          job_description: jobDescription,
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit job description');
+      }
+
+      toast({
+        title: "Success",
+        description: `Shortlist "${shortlistTitle}" has been saved and submitted to the backend.`,
+        className: "bg-accent text-accent-foreground",
+      });
+    } catch (error) {
+      console.error('Error submitting job description:', error);
+      toast({
+        title: "Submission Failed",
+        description: `Shortlist saved locally, but failed to submit to backend: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
-        toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
-        return;
+      toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
+      return;
     }
     setIsGeneratingSuggestions(true);
     setSuggestedSkills([]);
     try {
-        const result = await suggestSkills({ jobDescription });
-        if (result && result.skills) {
-            const newSuggestions = result.skills.filter(suggestedSkill => 
-                !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
-            );
-            setSuggestedSkills(newSuggestions);
-            if (newSuggestions.length > 0) {
-                toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
-            } else if (result.skills.length > 0) {
-                toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
-            } else {
-                 toast({ title: "No New Suggestions", description: "The AI could not find any skills to suggest.", variant: "default" });
-            }
+      const result = await suggestSkills({ jobDescription });
+      if (result && result.skills) {
+        const newSuggestions = result.skills.filter(suggestedSkill =>
+          !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
+        );
+        setSuggestedSkills(newSuggestions);
+        if (newSuggestions.length > 0) {
+          toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
+        } else if (result.skills.length > 0) {
+          toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
+        } else {
+          toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
         }
+      }
     } catch (error) {
-        console.error("Error generating skill suggestions:", error);
-        toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
+      console.error("Failed to generate skill suggestions:", error);
+      toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
     } finally {
-        setIsGeneratingSuggestions(false);
+      setIsGeneratingSuggestions(false);
     }
   };
 
   const handleAddSuggestedSkill = (skillName: string) => {
     if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
-        toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
-        return;
+      toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
+      return;
     }
     setNewParamName(skillName);
     setSuggestedSkills(prev => prev.filter(s => s !== skillName));
-    toast({ 
-      title: "Skill Selected", 
+    toast({
+      title: "Skill Selected",
       description: `"${skillName}" is loaded. Adjust its weight and click 'Add Skill' to stage it.`,
       className: "bg-accent text-accent-foreground"
     });
@@ -261,13 +330,13 @@ function CreatePageContent() {
     }
     setSortConfig({ key, direction });
   };
-  
+
   const filteredAndSortedCandidates = useMemo(() => {
     let filtered = [...candidates];
 
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(c => 
+      filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(lowerSearchTerm) ||
         c.email.toLowerCase().includes(lowerSearchTerm) ||
         c.phone.toLowerCase().includes(lowerSearchTerm)
@@ -293,7 +362,7 @@ function CreatePageContent() {
         } else if (sortConfig.key === 'overallScore') {
           valA = a.overallScore;
           valB = b.overallScore;
-        } else { 
+        } else {
           valA = a.skills[sortConfig.key] || 0;
           valB = b.skills[sortConfig.key] || 0;
         }
@@ -308,13 +377,13 @@ function CreatePageContent() {
 
   const handleExport = () => {
     if (filteredAndSortedCandidates.length === 0) {
-      toast({ title: "No Data", description: "No data to export.", variant: "destructive"});
+      toast({ title: "No Data", description: "No data to export.", variant: "destructive" });
       return;
     }
     exportCandidatesToCSV(filteredAndSortedCandidates, confirmedParameters, 'resumerank_export.csv');
     toast({ title: "Export Started", description: "Your CSV export has started.", className: "bg-accent text-accent-foreground" });
   };
-  
+
   const getSortIcon = (key: string) => {
     if (!sortConfig || sortConfig.key !== key) {
       return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/70" />;
@@ -329,54 +398,54 @@ function CreatePageContent() {
     <div className="flex min-h-screen flex-col">
       <DashboardHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
-        
         <Dialog open={isNewShortlistModalOpen} onOpenChange={(open) => {
-            if (!open) {
-              if (!shortlistId) {
-                  router.push('/dashboard');
-              }
+          if (!open) {
+            if (!shortlistId) {
+              router.push('/dashboard');
             }
+          }
         }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Create New Shortlist</DialogTitle>
-                    <DialogDescription>
-                        First, give your new shortlist a title and the associated job title.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="modalShortlistTitle">Shortlist Title</Label>
-                        <Input
-                            id="modalShortlistTitle"
-                            value={shortlistTitle}
-                            onChange={(e) => setShortlistTitle(e.target.value)}
-                            placeholder="e.g. Q4 Backend Engineers"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="modalJobTitle">Job Title</Label>
-                        <Input
-                            id="modalJobTitle"
-                            value={jobTitle}
-                            onChange={(e) => setJobTitle(e.target.value)}
-                            placeholder="e.g. Senior Go Developer"
-                        />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => router.push('/dashboard')}>Cancel</Button>
-                    <Button onClick={handleSetDetails}>Start Creating</Button>
-                </DialogFooter>
-            </DialogContent>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Shortlist</DialogTitle>
+              <DialogDescription>
+                First, give your new shortlist a title and the associated job title.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modalShortlistTitle">Shortlist Title</Label>
+                <Input
+                  id="modalShortlistTitle"
+                  value={shortlistTitle}
+                  onChange={(e) => setShortlistTitle(e.target.value)}
+                  placeholder="e.g. Q4 Backend Engineers"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modalJobTitle">Job Title</Label>
+                <Input
+                  id="modalJobTitle"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Senior Go Developer"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => router.push('/dashboard')}>Cancel</Button>
+              <Button onClick={handleSetDetails}>Start Creating</Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Resume Upload Card */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline"><UploadCloud className="h-5 w-5 text-primary" /> Resume Upload</CardTitle>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <UploadCloud className="h-5 w-5 text-primary" /> Resume Upload
+              </CardTitle>
               <CardDescription>Upload resumes (PDF/DOCX) or provide a Google Drive link.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -407,7 +476,9 @@ function CreatePageContent() {
           {/* Job Description Card */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline"><FileText className="h-5 w-5 text-primary" /> Job Description</CardTitle>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <FileText className="h-5 w-5 text-primary" /> Job Description
+              </CardTitle>
               <CardDescription>Paste the full job description. This provides context for scoring.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -423,7 +494,9 @@ function CreatePageContent() {
           {/* Custom Parameters Card */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline"><PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters</CardTitle>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters
+              </CardTitle>
               <CardDescription>Define skills and their importance (1-10). Confirm to apply and save.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -447,7 +520,9 @@ function CreatePageContent() {
                   <Label htmlFor="newParamWeight" className="text-xs">Weight: {newParamWeight}</Label>
                   <Slider
                     id="newParamWeight"
-                    min={1} max={10} step={1}
+                    min={1}
+                    max={10}
+                    step={1}
                     value={[newParamWeight]}
                     onValueChange={(value) => setNewParamWeight(value[0])}
                   />
@@ -458,9 +533,9 @@ function CreatePageContent() {
                   </Button>
                   <Button onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !jobDescription.trim()} variant="outline">
                     {isGeneratingSuggestions ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
+                      <Sparkles className="mr-2 h-4 w-4" />
                     )}
                     Suggest
                   </Button>
@@ -473,7 +548,9 @@ function CreatePageContent() {
         {suggestedSkills.length > 0 && (
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline"><Sparkles className="h-5 w-5 text-primary" /> AI Skill Suggestions</CardTitle>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <Sparkles className="h-5 w-5 text-primary" /> AI Skill Suggestions
+              </CardTitle>
               <CardDescription>Click a skill to load it into the form above. You can then adjust its weight before adding.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -489,9 +566,9 @@ function CreatePageContent() {
         )}
 
         <div className="flex justify-center my-6">
-            <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
-                <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
-            </Button>
+          <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
+            <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
+          </Button>
         </div>
 
         {/* Candidate Scores Card */}
@@ -500,14 +577,14 @@ function CreatePageContent() {
             <div className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2 font-headline">
                 <ClipboardList className="h-5 w-5 text-primary" />
-                  Candidate Scores
+                Candidate Scores
               </CardTitle>
               <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-grow sm:flex-grow-0">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input 
+                <Input
                   placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -534,7 +611,8 @@ function CreatePageContent() {
                       <Input
                         id="overallScoreFilterPopover"
                         type="number"
-                        min="0" max="100"
+                        min="0"
+                        max="100"
                         placeholder="e.g., 80"
                         value={overallScoreFilter}
                         onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
@@ -544,23 +622,24 @@ function CreatePageContent() {
                       <div className="space-y-2 pt-2 border-t">
                         <Label className="font-medium">Min. Skill Scores (Active)</Label>
                         <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
-                        {skillFilters.map((filter, index) => (
-                          <div key={filter.skillName}>
-                            <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
-                            <Input
-                              id={`skillFilterPopover-${filter.skillName}`}
-                              type="number"
-                              min="0" max="10"
-                              placeholder="e.g., 7"
-                              value={filter.minScore}
-                              onChange={(e) => {
-                                const newFilters = [...skillFilters];
-                                newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
-                                setSkillFilters(newFilters);
-                              }}
-                            />
-                          </div>
-                        ))}
+                          {skillFilters.map((filter, index) => (
+                            <div key={filter.skillName}>
+                              <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
+                              <Input
+                                id={`skillFilterPopover-${filter.skillName}`}
+                                type="number"
+                                min="0"
+                                max="10"
+                                placeholder="e.g., 7"
+                                value={filter.minScore}
+                                onChange={(e) => {
+                                  const newFilters = [...skillFilters];
+                                  newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
+                                  setSkillFilters(newFilters);
+                                }}
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -630,7 +709,6 @@ function CreatePageContent() {
   );
 }
 
-
 export default function CreatePage() {
   return (
     <Suspense fallback={
@@ -641,4 +719,3 @@ export default function CreatePage() {
       <CreatePageContent />
     </Suspense>
   );
-}
