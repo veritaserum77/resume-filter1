@@ -103,9 +103,10 @@ useEffect(() => {
     const hasContentToSaveAsDraft = shortlistTitle.trim() !== '' || jobTitle.trim() !== '';
     if (!hasContentToSaveAsDraft) return;
 
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      // Authenticated - save to backend
+    const token = localStorage.getItem('token');
+
+    if (token && !shortlistId) {
+      // Authenticated - save to backend only if not submitted yet
       fetch('https://backend-f2yv.onrender.com/jd/draft', {
         method: 'POST',
         headers: {
@@ -146,6 +147,7 @@ useEffect(() => {
     }
   };
 }, [isLoaded, shortlistTitle, jobTitle, jobDescription, parameters, candidates, shortlistId, tempId]);
+
 
 
   // Update skill filters when confirmed parameters change
