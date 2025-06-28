@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getJDHistory } from '@/lib/api';
+import { getJDHistory, deleteJD } from '@/lib/api';
 
 const ShortlistCard = ({ shortlist, onDelete }: { shortlist: Shortlist; onDelete: () => void }) => {
   return (
@@ -41,7 +41,7 @@ const ShortlistCard = ({ shortlist, onDelete }: { shortlist: Shortlist; onDelete
         </CardContent>
         <CardFooter className="flex items-center justify-between gap-2">
           <Button asChild variant="outline" className="flex-grow">
-            <Link href={/create?id=${shortlist.id}}>
+            <Link href={`/create?id=${shortlist.id}`}>
               <Edit className="mr-2 h-4 w-4" />
               {shortlist.isDraft ? 'Continue Draft' : 'View Shortlist'}
             </Link>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchServerShortlists = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) return;
 
       try {
@@ -104,9 +104,10 @@ export default function DashboardPage() {
           jobTitle: item.job_title,
           candidateCount: 0,
           lastModified: new Date().toLocaleDateString(),
-          isDraft: false,
+          isDraft: item.is_draft || false,
         }));
-        setShortlists(serverShortlists);
+        setShortlists(serverShortlists.filter(s => !s.isDraft));
+        setDrafts(serverShortlists.filter(s => s.isDraft));
       } catch (error) {
         console.error("Failed to fetch shortlists from backend", error);
       }
@@ -116,16 +117,26 @@ export default function DashboardPage() {
     loadDrafts();
   }, []);
 
-  const handleDelete = (id: string, title: string) => {
-    const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
-    const updatedShortlists = allShortlists.filter(s => s.id !== id);
-    localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    loadDrafts();
-    toast({
-      title: "Shortlist Deleted",
-      description: The shortlist "${title}" has been removed.,
-      className: "bg-accent text-accent-foreground",
-    });
+  const handleDelete = async (id: string, title: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    try {
+      await deleteJD(token, id);
+      toast({
+        title: "Shortlist Deleted",
+        description: `The shortlist "${title}" has been removed.`,
+        className: "bg-accent text-accent-foreground",
+      });
+      setShortlists(prev => prev.filter(s => s.id !== id));
+      setDrafts(prev => prev.filter(s => s.id !== id));
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -186,3 +197,4 @@ export default function DashboardPage() {
       </footer>
     </div>
   );
+}
