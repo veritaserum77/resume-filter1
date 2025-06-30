@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, ChangeEvent } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -49,26 +49,15 @@ interface Candidate {
   overallScore: number;
 }
 
-interface Shortlist {
-  id: string;
-  title: string;
-  jobTitle: string;
-  jobDescription: string;
-  parameters: SkillParameter[];
-  candidates: Candidate[];
-  candidateCount: number;
-  lastModified: string;
-  isDraft: boolean;
-}
-
 const INITIAL_PARAMETERS: SkillParameter[] = [];
 
-export default function CreatePage() {
+function CreatePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const shortlistId = searchParams.get('id');
   const [isLoading, setIsLoading] = useState(!!shortlistId);
   const [isSaving, setIsSaving] = useState(false);
+  const [tempId] = useState(() => `sl-${Date.now()}`);
 
   // Form state
   const [shortlistTitle, setShortlistTitle] = useState('');
@@ -166,19 +155,6 @@ export default function CreatePage() {
       return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
     });
   }, [confirmedParameters, isLoading]);
-
-  const resetForm = () => {
-    setShortlistTitle('');
-    setJobTitle('');
-    setJobDescription('');
-    setGdriveLink('');
-    setParameters(INITIAL_PARAMETERS);
-    setConfirmedParameters(INITIAL_PARAMETERS);
-    setCandidates([]);
-    setNewParamName('');
-    setNewParamWeight(5);
-    setSuggestedSkills([]);
-  };
 
   const handleSetDetails = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
@@ -814,5 +790,17 @@ export default function CreatePage() {
         © {new Date().getFullYear()} ResumeRank. Advanced Resume Screening.
       </footer>
     </div>
+  );
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <CreatePageContent />
+    </Suspense>
   );
 }
