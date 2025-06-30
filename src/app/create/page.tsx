@@ -5,6 +5,7 @@ import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
 import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
+import { submitJD, updateJD } from '@/lib/api';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
