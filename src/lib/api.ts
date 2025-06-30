@@ -14,7 +14,7 @@ export async function signupInit(name: string, email: string, password: string) 
     const error = await safeParseError(res);
     throw new Error(error || "Signup failed");
   }
-
+  console.log(res);
   return res.json(); // { message: "...", etc }
 }
 
