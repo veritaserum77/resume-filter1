@@ -73,23 +73,7 @@ const ShortlistCard = ({ shortlist, onDelete }: { shortlist: Shortlist; onDelete
 
 export default function DashboardPage() {
   const [shortlists, setShortlists] = useState<Shortlist[]>([]);
-  const [drafts, setDrafts] = useState<Shortlist[]>([]);
   const { toast } = useToast();
-
-  const loadDrafts = () => {
-    const storedShortlistsJSON = localStorage.getItem('resumerank_shortlists');
-    let allShortlists: Shortlist[] = [];
-    if (storedShortlistsJSON) {
-      try {
-        allShortlists = JSON.parse(storedShortlistsJSON);
-      } catch (error) {
-        console.error("Failed to parse shortlists from localStorage", error);
-        allShortlists = [];
-        localStorage.setItem('resumerank_shortlists', JSON.stringify([]));
-      }
-    }
-    setDrafts(allShortlists.filter(s => s.isDraft));
-  };
 
   useEffect(() => {
     const fetchServerShortlists = async () => {
@@ -113,14 +97,12 @@ export default function DashboardPage() {
     };
 
     fetchServerShortlists();
-    loadDrafts();
   }, []);
 
   const handleDelete = (id: string, title: string) => {
     const allShortlists: Shortlist[] = JSON.parse(localStorage.getItem('resumerank_shortlists') || '[]');
     const updatedShortlists = allShortlists.filter(s => s.id !== id);
     localStorage.setItem('resumerank_shortlists', JSON.stringify(updatedShortlists));
-    loadDrafts();
     toast({
       title: "Shortlist Deleted",
       description: `The shortlist "${title}" has been removed.`,
@@ -159,24 +141,6 @@ export default function DashboardPage() {
               <Button asChild>
                 <Link href="/create">Create Your First Shortlist</Link>
               </Button>
-            </div>
-          )}
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold flex items-center gap-3">
-            <Edit className="h-6 w-6 text-primary" />
-            Drafts
-          </h2>
-          {drafts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {drafts.map(draft => (
-                <ShortlistCard key={draft.id} shortlist={draft} onDelete={() => handleDelete(draft.id, draft.title)} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 px-6 border-2 border-dashed rounded-lg bg-card">
-              <p className="text-muted-foreground">You have no saved drafts.</p>
             </div>
           )}
         </section>
