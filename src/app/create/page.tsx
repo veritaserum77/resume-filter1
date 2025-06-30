@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
+import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
+import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from '@/hooks/use-toast';
+import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,51 +32,37 @@ import {
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { exportCandidatesToCSV } from '@/lib/csvExport';
-import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
-
-interface SkillParameter {
-  id: string;
-  name: string;
-  weight: number;
-}
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  resumeUrl: string;
-  skills: Record<string, number>;
-  overallScore: number;
-}
 
 const INITIAL_PARAMETERS: SkillParameter[] = [];
 
 function CreatePageContent() {
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const router = useRouter();
-  const shortlistId = searchParams.get('id');
-  const [isLoading, setIsLoading] = useState(!!shortlistId);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const [shortlistId, setShortlistId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [tempId] = useState(() => `sl-${Date.now()}`);
 
-  // Form state
+  // Shortlist-specific state
   const [shortlistTitle, setShortlistTitle] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [gdriveLink, setGdriveLink] = useState('');
+
+  // Staged vs. Confirmed parameters
   const [parameters, setParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
   const [confirmedParameters, setConfirmedParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(!shortlistId);
 
-  // New parameter state
+  // Staging new parameters
   const [newParamName, setNewParamName] = useState('');
-  const [newParamWeight, setNewParamWeight] = useState(5);
+  const [newParamWeight, setNewParamWeight] = useState<number>(5);
 
-  // AI suggestions
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+
+  // AI Suggestions
   const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
@@ -83,66 +72,75 @@ function CreatePageContent() {
   const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
+  const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
 
-  // Load data when component mounts or shortlistId changes
+  // Load data on component mount
   useEffect(() => {
-    const loadShortlistData = async () => {
-      if (!shortlistId) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication required');
-        }
-
-        const response = await fetch(`https://backend-f2yv.onrender.com/jd/${shortlistId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch shortlist');
-        }
-
-        const data = await response.json();
-        
-        setShortlistTitle(data.job_title);
-        setJobTitle(data.job_title);
-        setJobDescription(data.job_description);
-        
-        const params = Object.entries(data.skills || {}).map(([name, weight]) => ({
-          id: `${Date.now()}-${name}`,
-          name,
-          weight: Number(weight),
-        }));
-        
-        setParameters(params);
-        setConfirmedParameters(params);
-        setCandidates(data.candidates || []);
-
-      } catch (error) {
+    const id = searchParams.get('id');
+    if (id) {
+      setShortlistId(id);
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetchShortlistHistory(token);
+      } else {
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load shortlist",
+          title: "Authentication Required",
+          description: "Please log in to view the shortlist.",
           variant: "destructive",
         });
         router.push('/dashboard');
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } else {
+      setIsNewShortlistModalOpen(true);
+    }
+    setIsLoaded(true);
+  }, [searchParams, router]);
 
-    loadShortlistData();
-  }, [shortlistId, router]);
+  const fetchShortlistHistory = async (token: string) => {
+    try {
+      const res = await fetch('https://backend-f2yv.onrender.com/jd/history', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch shortlist history');
+      }
+
+      const shortlists: any[] = await res.json(); // Use 'any' to handle dynamic structure
+      const selectedShortlist = shortlists.find(s => s._id?.$oid === shortlistId);
+      if (selectedShortlist) {
+        setShortlistTitle(selectedShortlist.job_title || ''); // Using job_title as title
+        setJobTitle(selectedShortlist.job_title || '');
+        setJobDescription(selectedShortlist.job_description || '');
+        // Transform skills object into parameters array
+        const params: SkillParameter[] = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate unique id
+          name,
+          weight: typeof weight === 'object' && '$numberInt' in weight ? parseInt(weight.$numberInt) : (weight as number),
+        }));
+        setParameters(params);
+        setConfirmedParameters(params);
+        setCandidates(selectedShortlist.candidates || []);
+      } else {
+        throw new Error('Shortlist not found');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Could not load shortlist: ${error.message}`,
+        variant: "destructive",
+      });
+      router.push('/dashboard');
+    }
+  };
 
   // Update skill filters when confirmed parameters change
   useEffect(() => {
-    if (isLoading) return;
-    
+    if (!isLoaded) return;
     setSkillFilters(prevFilters => {
       const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
       const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
@@ -154,154 +152,111 @@ function CreatePageContent() {
 
       return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
     });
-  }, [confirmedParameters, isLoading]);
+  }, [confirmedParameters, isLoaded]);
 
   const handleSetDetails = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({
-        title: "Details Required",
-        description: "Please provide both a Shortlist Title and a Job Title to continue.",
-        variant: "destructive",
-      });
+      toast({ title: "Details Required", description: "Please provide both a Shortlist Title and a Job Title to continue.", variant: "destructive" });
       return;
     }
     setIsNewShortlistModalOpen(false);
   };
 
   const handleAddParameter = () => {
-    if (!newParamName.trim()) {
-      toast({
-        title: "Error",
-        description: "Skill name cannot be empty.",
-        variant: "destructive",
-      });
+    if (newParamName.trim() === '') {
+      toast({ title: "Error", description: "Skill name cannot be empty.", variant: "destructive" });
       return;
     }
-
-    if (parameters.some(p => p.name.toLowerCase() === newParamName.toLowerCase())) {
-      toast({
-        title: "Error",
-        description: "Skill already exists in the staged list.",
-        variant: "destructive",
-      });
+    if (parameters.find(p => p.name.toLowerCase() === newParamName.toLowerCase())) {
+      toast({ title: "Error", description: "Skill already exists in the staged list.", variant: "destructive" });
       return;
     }
-
-    const newParam: SkillParameter = {
-      id: `${Date.now()}-${newParamName}`,
-      name: newParamName,
-      weight: newParamWeight,
-    };
-
-    setParameters([...parameters, newParam]);
+    setParameters([...parameters, { id: Date.now().toString(), name: newParamName, weight: newParamWeight }]);
     setNewParamName('');
     setNewParamWeight(5);
-
-    toast({
-      title: "Skill Staged",
-      description: `Skill "${newParamName}" staged. Press 'Confirm & Save' to apply.`,
-      className: "bg-accent text-accent-foreground",
-    });
+    toast({ title: "Skill Staged", description: `Skill "${newParamName}" staged. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
   };
 
   const handleRemoveParameter = (id: string) => {
     const removedParam = parameters.find(p => p.id === id);
     setParameters(parameters.filter(p => p.id !== id));
-    
     if (removedParam) {
-      toast({
-        title: "Skill Staged for Removal",
-        description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`,
-        className: "bg-accent text-accent-foreground",
-      });
+      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
     }
   };
 
   const handleConfirmAndSave = async () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({
-        title: "Name Required",
-        description: "Please provide a Shortlist Title and Job Title before saving.",
-        variant: "destructive",
-      });
+      toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
       return;
     }
+
+    setConfirmedParameters([...parameters]);
+
+    const shortlistData: Shortlist = {
+      id: shortlistId || tempId,
+      title: shortlistTitle,
+      jobTitle,
+      jobDescription,
+      parameters,
+      candidates,
+      candidateCount: candidates.length,
+      lastModified: '2025-06-28 01:10 PM IST',
+      isDraft: false,
+    };
 
     const token = localStorage.getItem('token');
     if (!token) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to save the shortlist.",
+        description: "Please log in to save the shortlist to the database.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSaving(true);
-
     try {
-      const endpoint = shortlistId ? `/jd/update/${shortlistId}` : '/jd/submit';
-      const method = shortlistId ? 'PUT' : 'POST';
-
-      const response = await fetch(`https://backend-f2yv.onrender.com${endpoint}`, {
-        method,
+      const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           job_title: jobTitle,
           job_description: jobDescription,
-          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
+          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || error.message || 'Failed to save shortlist');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Submission failed');
       }
 
-      const result = await response.json();
-      const savedId = shortlistId || result.jd_id;
-
       toast({
-        title: "Shortlist Saved",
-        description: `Shortlist "${shortlistTitle}" has been ${shortlistId ? 'updated' : 'created'}.`,
+        title: "Submitted Successfully",
+        description: `Shortlist "${shortlistTitle}" saved to database.`,
         className: "bg-accent text-accent-foreground",
       });
-
-      // Update confirmed parameters
-      setConfirmedParameters([...parameters]);
-
-      // Update URL if this was a new shortlist
-      if (!shortlistId && savedId) {
-        router.replace(`/create?id=${savedId}`);
-      }
-
-    } catch (error) {
+      setShortlistId(shortlistData.id);
+      router.push('/dashboard');
+    } catch (error: any) {
       toast({
-        title: "Save Failed",
-        description: error instanceof Error ? error.message : "Failed to save shortlist",
+        title: "Submission Failed",
+        description: `Failed to save to database: ${error.message}`,
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
-      toast({
-        title: "Job Description Required",
-        description: "Please paste a job description first.",
-        variant: "destructive",
-      });
+      toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
       return;
     }
-    
     setIsGeneratingSuggestions(true);
     setSuggestedSkills([]);
-    
     try {
       const result = await suggestSkills({ jobDescription });
       if (result && result.skills) {
@@ -309,56 +264,33 @@ function CreatePageContent() {
           !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
         );
         setSuggestedSkills(newSuggestions);
-        
         if (newSuggestions.length > 0) {
-          toast({
-            title: "Suggestions Ready",
-            description: "AI has generated skill suggestions for you below.",
-            className: "bg-accent text-accent-foreground",
-          });
+          toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
         } else if (result.skills.length > 0) {
-          toast({
-            title: "Suggestions Ready",
-            description: "All suggested skills are already in your parameters list.",
-            className: "bg-accent text-accent-foreground",
-          });
+          toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
         } else {
-          toast({
-            title: "No New Suggestions",
-            description: "The AI could not generate new skill suggestions.",
-            variant: "default",
-          });
+          toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
         }
       }
     } catch (error) {
       console.error("Failed to generate skill suggestions:", error);
-      toast({
-        title: "Generation Failed",
-        description: "An error occurred while generating suggestions. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
     } finally {
       setIsGeneratingSuggestions(false);
     }
   };
 
   const handleAddSuggestedSkill = (skillName: string) => {
-    if (parameters.some(p => p.name.toLowerCase() === skillName.toLowerCase())) {
-      toast({
-        title: "Skill Exists",
-        description: `"${skillName}" is already in your staged parameters.`,
-        variant: "default",
-      });
+    if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
+      toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
       return;
     }
-    
     setNewParamName(skillName);
     setSuggestedSkills(prev => prev.filter(s => s !== skillName));
-    
     toast({
       title: "Skill Selected",
       description: `"${skillName}" is loaded. Adjust its weight and click 'Add Skill' to stage it.`,
-      className: "bg-accent text-accent-foreground",
+      className: "bg-accent text-accent-foreground"
     });
   };
 
@@ -411,53 +343,37 @@ function CreatePageContent() {
         return 0;
       });
     }
-    
     return filtered;
   }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig]);
 
   const handleExport = () => {
     if (filteredAndSortedCandidates.length === 0) {
-      toast({
-        title: "No Data",
-        description: "No data to export.",
-        variant: "destructive",
-      });
+      toast({ title: "No Data", description: "No data to export.", variant: "destructive" });
       return;
     }
-    
     exportCandidatesToCSV(filteredAndSortedCandidates, confirmedParameters, 'resumerank_export.csv');
-    
-    toast({
-      title: "Export Started",
-      description: "Your CSV export has started.",
-      className: "bg-accent text-accent-foreground",
-    });
+    toast({ title: "Export Started", description: "Your CSV export has started.", className: "bg-accent text-accent-foreground" });
   };
 
   const getSortIcon = (key: string) => {
     if (!sortConfig || sortConfig.key !== key) {
       return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/70" />;
     }
-    return sortConfig.direction === 'asc' 
-      ? <ChevronUp className="ml-2 h-4 w-4" />
-      : <ChevronDown className="ml-2 h-4 w-4" />;
+    if (sortConfig.direction === 'asc') {
+      return <ChevronUp className="ml-2 h-4 w-4" />;
+    }
+    return <ChevronDown className="ml-2 h-4 w-4" />;
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col">
       <DashboardHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         <Dialog open={isNewShortlistModalOpen} onOpenChange={(open) => {
-          if (!open && !shortlistId) {
-            router.push('/dashboard');
+          if (!open) {
+            if (!shortlistId) {
+              router.push('/dashboard');
+            }
           }
         }}>
           <DialogContent>
@@ -586,11 +502,7 @@ function CreatePageContent() {
                   <Button onClick={handleAddParameter} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Skill
                   </Button>
-                  <Button 
-                    onClick={handleGenerateSuggestions} 
-                    disabled={isGeneratingSuggestions || !jobDescription.trim()} 
-                    variant="outline"
-                  >
+                  <Button onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !jobDescription.trim()} variant="outline">
                     {isGeneratingSuggestions ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -625,18 +537,8 @@ function CreatePageContent() {
         )}
 
         <div className="flex justify-center my-6">
-          <Button 
-            onClick={handleConfirmAndSave} 
-            size="lg" 
-            className="w-full max-w-xs"
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <CheckCircle className="mr-2 h-5 w-5" />
-            )}
-            {isSaving ? "Saving..." : "Confirm & Save Shortlist"}
+          <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
+            <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
           </Button>
         </div>
 
@@ -726,26 +628,16 @@ function CreatePageContent() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
-                      Name {getSortIcon('name')}
-                    </TableHead>
+                    <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
                     <TableHead className="whitespace-nowrap">Phone</TableHead>
-                    <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
-                      Email {getSortIcon('email')}
-                    </TableHead>
+                    <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
                     <TableHead className="whitespace-nowrap">Resume</TableHead>
                     {confirmedParameters.map(param => (
-                      <TableHead 
-                        key={param.id} 
-                        onClick={() => handleSort(param.name)} 
-                        className="cursor-pointer hover:bg-muted/50 whitespace-nowrap"
-                      >
+                      <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
                         {param.name} {getSortIcon(param.name)}
                       </TableHead>
                     ))}
-                    <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
-                      Overall Score {getSortIcon('overallScore')}
-                    </TableHead>
+                    <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score {getSortIcon('overallScore')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -756,12 +648,7 @@ function CreatePageContent() {
                         <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
                         <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <a 
-                            href={candidate.resumeUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-primary hover:underline flex items-center gap-1"
-                          >
+                          <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                             <LinkIcon className="h-4 w-4" /> View
                           </a>
                         </TableCell>
