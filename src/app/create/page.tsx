@@ -76,66 +76,71 @@ function CreatePageContent() {
 
   // Load data on component mount
   useEffect(() => {
-    const id = searchParams.get('id');
-    if (id) {
-      setShortlistId(id);
-      const token = localStorage.getItem('token');
-      if (token) {
-        fetchShortlistHistory(token);
-      } else {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to view the shortlist.",
-          variant: "destructive",
-        });
-        router.push('/dashboard');
-      }
+  const id = searchParams.get('id');
+  if (id) {
+    setShortlistId(id);
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchShortlistHistory(token, id); // ✅ Pass id directly
     } else {
-      setIsNewShortlistModalOpen(true);
-    }
-    setIsLoaded(true);
-  }, [searchParams, router]);
-
-  const fetchShortlistHistory = async (token: string) => {
-    try {
-      const res = await fetch('https://backend-f2yv.onrender.com/jd/history', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch shortlist history');
-      }
-
-      const data = await res.json();
-      const selectedShortlist = data.history.find((s: any) => s.jd_id === shortlistId);
-
-      if (selectedShortlist) {
-        setShortlistTitle(selectedShortlist.job_title || ''); // Using job_title as title
-        setJobTitle(selectedShortlist.job_title || '');
-        setJobDescription(selectedShortlist.job_description || '');
-        // Transform skills object into parameters array
-        const params: SkillParameter[] = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate unique id
-          name,
-          weight: typeof weight === 'object' && '$numberInt' in weight ? parseInt(weight.$numberInt) : (weight as number),
-        }));
-        setParameters(params);
-        setConfirmedParameters(params);
-        setCandidates(selectedShortlist.candidates || []);
-      } else {
-        throw new Error('Shortlist not found');
-      }
-    } catch (error: any) {
       toast({
-        title: "Error",
-        description: `Could not load shortlist: ${error.message}`,
+        title: "Authentication Required",
+        description: "Please log in to view the shortlist.",
         variant: "destructive",
       });
       router.push('/dashboard');
+    }
+  } else {
+    setIsNewShortlistModalOpen(true);
+  }
+  setIsLoaded(true);
+}, [searchParams, router]);
+
+const fetchShortlistHistory = async (token: string, id: string) => {
+  try {
+    const res = await fetch('https://backend-f2yv.onrender.com/jd/history', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch shortlist history');
+    }
+
+    const data = await res.json();
+
+    // ✅ Debug logs to verify values
+    console.log("Fetched history from backend:", data.history);
+    console.log("shortlistId from URL:", id);
+
+    const selectedShortlist = data.history.find((s: any) => s.jd_id === id);
+
+    if (selectedShortlist) {
+      setShortlistTitle(selectedShortlist.job_title || '');
+      setJobTitle(selectedShortlist.job_title || '');
+      setJobDescription(selectedShortlist.job_description || '');
+
+      const params: SkillParameter[] = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name,
+        weight: typeof weight === 'object' && '$numberInt' in weight ? parseInt(weight.$numberInt) : (weight as number),
+      }));
+      setParameters(params);
+      setConfirmedParameters(params);
+      setCandidates(selectedShortlist.candidates || []);
+    } else {
+      throw new Error('Shortlist not found');
+    }
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: `Could not load shortlist: ${error.message}`,
+      variant: "destructive",
+    });
+       router.push('/dashboard');
     }
   };
 
