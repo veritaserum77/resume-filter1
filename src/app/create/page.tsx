@@ -191,70 +191,65 @@ const fetchShortlistHistory = async (token: string, id: string) => {
     }
   };
 
-  const handleConfirmAndSave = async () => {
-    if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({ title: "Name Required", description: "Please provide a Shortlist Title and Job Title before saving.", variant: "destructive" });
-      return;
-    }
 
-    setConfirmedParameters([...parameters]);
 
-    const shortlistData: Shortlist = {
-      id: shortlistId || tempId,
-      title: shortlistTitle,
-      jobTitle,
-      jobDescription,
-      parameters,
-      candidates,
-      candidateCount: candidates.length,
-      lastModified: '2025-06-28 01:10 PM IST',
-      isDraft: false,
-    };
+const handleConfirmAndSave = async () => {
+  if (!shortlistTitle.trim() || !jobTitle.trim()) {
+    toast({
+      title: "Name Required",
+      description: "Please provide a Shortlist Title and Job Title before saving.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
+  setConfirmedParameters([...parameters]);
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    toast({
+      title: "Authentication Required",
+      description: "Please log in to save the shortlist to the database.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const jdPayload = {
+    job_title: jobTitle,
+    job_description: jobDescription,
+    skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
+  };
+
+  try {
+    if (shortlistId) {
+      // ✅ Update existing JD
+      await updateJD(token, shortlistId, jdPayload);
       toast({
-        title: "Authentication Required",
-        description: "Please log in to save the shortlist to the database.",
-        variant: "destructive",
+        title: "Updated Successfully",
+        description: `Shortlist "${shortlistTitle}" updated in database.`,
+        className: "bg-accent text-accent-foreground",
       });
-      return;
-    }
-
-    try {
-      const res = await fetch('https://backend-f2yv.onrender.com/jd/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          job_title: jobTitle,
-          job_description: jobDescription,
-          skills: Object.fromEntries(parameters.map(p => [p.name, p.weight]))
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Submission failed');
-      }
-
+    } else {
+      // ✅ Submit new JD
+      await submitJD(token, jdPayload);
       toast({
         title: "Submitted Successfully",
         description: `Shortlist "${shortlistTitle}" saved to database.`,
         className: "bg-accent text-accent-foreground",
       });
-      setShortlistId(shortlistData.id);
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        title: "Submission Failed",
-        description: `Failed to save to database: ${error.message}`,
-        variant: "destructive",
-      });
     }
-  };
+
+    router.push('/dashboard');
+  } catch (error: any) {
+    toast({
+      title: "Save Failed",
+      description: error.message || "Could not save shortlist.",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
