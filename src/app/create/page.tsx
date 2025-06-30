@@ -110,8 +110,9 @@ function CreatePageContent() {
         throw new Error('Failed to fetch shortlist history');
       }
 
-      const shortlists: any[] = await res.json(); // Use 'any' to handle dynamic structure
-      const selectedShortlist = shortlists.find(s => s._id?.$oid === shortlistId);
+      const data = await res.json();
+      const selectedShortlist = data.history.find((s: any) => s.jd_id === shortlistId);
+
       if (selectedShortlist) {
         setShortlistTitle(selectedShortlist.job_title || ''); // Using job_title as title
         setJobTitle(selectedShortlist.job_title || '');
