@@ -1,7 +1,7 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* Existing config options */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  /* New Server Actions configuration */
+  experimental: {
+    serverActions: true,
+  },
+  
+  /* Environment variables configuration (optional but recommended) */
+  env: {
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  }
 };
 
 export default nextConfig;
