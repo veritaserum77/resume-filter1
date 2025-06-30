@@ -1,93 +1,66 @@
-'use client';
+// src/ai/suggest-skills-flow.ts
+'use server';
 
-import { useState } from 'react';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { suggestSkills } from '@/actions/suggest-skills';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles } from 'lucide-react';
 
-export function SkillSuggestForm() {
-  const [jobDescription, setJobDescription] = useState('');
-  const [skills, setSkills] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const SuggestSkillsInputSchema = z.object({
+  jobDescription: z.string().describe('The full text of the job description.'),
+});
+export type SuggestSkillsInput = z.infer<typeof SuggestSkillsInputSchema>;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!jobDescription.trim()) {
-      setError('Please enter a job description');
-      return;
-    }
+const SuggestSkillsOutputSchema = z.object({
+  skills: z
+    .array(z.string().describe('A single, relevant technical or soft skill.'))
+    .describe('A list of 5 to 10 key skills extracted from the job description.'),
+});
+export type SuggestSkillsOutput = z.infer<typeof SuggestSkillsOutputSchema>;
 
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { skills } = await suggestSkills({ 
-        jobDescription: jobDescription.trim() 
-      });
-      setSkills(skills);
-    } catch (err) {
-      setError('Failed to generate suggestions. Please try again.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="jobDescription" className="block text-sm font-medium mb-2">
-            Job Description
-          </label>
-          <Textarea
-            id="jobDescription"
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the job description here..."
-            rows={8}
-            className="w-full"
-            disabled={isLoading}
-          />
-          {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
-        </div>
-
-        <Button 
-          type="submit" 
-          disabled={isLoading || !jobDescription.trim()}
-          className="w-full sm:w-auto"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Suggest Skills
-            </>
-          )}
-        </Button>
-      </form>
-
-      {skills.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Suggested Skills</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {skills.map((skill, index) => (
-              <div 
-                key={index} 
-                className="bg-secondary/50 px-4 py-2 rounded-md border"
-              >
-                {skill}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+export async function suggestSkillsFlow(input: SuggestSkillsInput): Promise<SuggestSkillsOutput> {
+  try {
+    const result = await suggestSkills(input);
+    return { skills: result.skills };
+  } catch (error) {
+    console.error('Flow execution failed:', error);
+    throw error;
+  }
 }
+
+const suggestSkillsPrompt = ai.definePrompt({
+  name: 'suggestSkillsPrompt',
+  input: { schema: SuggestSkillsInputSchema },
+  output: { schema: SuggestSkillsOutputSchema },
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+    ],
+  },
+  prompt: `You are an expert recruitment analyst AI with deep knowledge of job roles and technical skill requirements.
+
+Your task is to analyze the following job description and extract a concise list of the most **relevant, concrete, and technical skills** required for the role. Focus only on hard skills — tools, technologies, languages, and domain-specific expertise. Avoid generic terms like "communication" or "leadership."
+
+Return a list of 5 to 10 **unique, specific skills**, using short standardized names (e.g., "Python", "SQL", "React", "AWS", "Project Management", "Data Analysis").
+
+Job Description:
+---
+{{{jobDescription}}}
+---
+
+Respond with only the list of skills in bullet points or array format.`,
+});
+
+const suggestSkillsFlowWrapper = ai.defineFlow(
+  {
+    name: 'suggestSkillsFlow',
+    inputSchema: SuggestSkillsInputSchema,
+    outputSchema: SuggestSkillsOutputSchema,
+  },
+  async (input) => {
+    const { output } = await suggestSkillsPrompt(input);
+    return output!;
+  }
+);
