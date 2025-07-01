@@ -6,7 +6,7 @@ import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { submitJD, updateJD } from '@/lib/api';
-
+import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
