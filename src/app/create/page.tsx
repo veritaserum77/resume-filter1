@@ -212,11 +212,11 @@ function CreatePageContent() {
     }
 
     const jdPayload = {
-  job_title: jobTitle,
-  job_description: jobDescription,
-  skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
-  resume_drive_link: gdriveLink.trim() || undefined,
-};
+      job_title: jobTitle,
+      job_description: jobDescription,
+      skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
+      resume_drive_link: gdriveLink.trim() || undefined,
+    };
 
     try {
       if (shortlistId) {
@@ -297,6 +297,22 @@ function CreatePageContent() {
     setSortConfig({ key, direction });
   };
 
+  // Calculate scores for each candidate
+  const calculateScores = (candidate: Candidate): { jdScore: number; skillsScore: number; overallScore: number } => {
+    // Assume jdScore is derived (e.g., based on resume match) or hardcoded for now; adjust based on your logic
+    const jdScore = candidate.overallScore ? Math.round((candidate.overallScore / 100) * 30) : 0;
+    // Calculate skillsScore based on confirmedParameters and candidate.skills
+    const totalWeight = confirmedParameters.reduce((sum, param) => sum + param.weight, 0);
+    const weightedSkillScore = confirmedParameters.reduce((sum, param) => {
+      const skillScore = candidate.skills[param.name] || 0;
+      return sum + (skillScore / 10) * param.weight; // Normalize skill score (0-10) to weight contribution
+    }, 0);
+    const skillsScore = totalWeight > 0 ? Math.round((weightedSkillScore / totalWeight) * 70) : 0;
+    const overallScore = jdScore + skillsScore;
+
+    return { jdScore, skillsScore, overallScore };
+  };
+
   const filteredAndSortedCandidates = useMemo(() => {
     let filtered = [...candidates];
 
@@ -310,12 +326,18 @@ function CreatePageContent() {
     }
 
     if (overallScoreFilter !== '') {
-      filtered = filtered.filter(c => c.overallScore >= Number(overallScoreFilter));
+      filtered = filtered.filter(c => {
+        const { overallScore } = calculateScores(c);
+        return overallScore >= Number(overallScoreFilter);
+      });
     }
 
     skillFilters.forEach(filter => {
       if (filter.minScore !== '') {
-        filtered = filtered.filter(c => (c.skills[filter.skillName] || 0) >= Number(filter.minScore));
+        filtered = filtered.filter(c => {
+          const skillScore = c.skills[filter.skillName] || 0;
+          return skillScore >= Number(filter.minScore);
+        });
       }
     });
 
@@ -325,12 +347,11 @@ function CreatePageContent() {
         if (sortConfig.key === 'name' || sortConfig.key === 'email') {
           valA = a[sortConfig.key].toLowerCase();
           valB = b[sortConfig.key].toLowerCase();
-        } else if (sortConfig.key === 'overallScore') {
-          valA = a.overallScore;
-          valB = b.overallScore;
-        } else {
-          valA = a.skills[sortConfig.key] || 0;
-          valB = b.skills[sortConfig.key] || 0;
+        } else if (sortConfig.key === 'jdScore' || sortConfig.key === 'skillsScore' || sortConfig.key === 'overallScore') {
+          const { jdScore: aJd, skillsScore: aSkills, overallScore: aOverall } = calculateScores(a);
+          const { jdScore: bJd, skillsScore: bSkills, overallScore: bOverall } = calculateScores(b);
+          valA = sortConfig.key === 'jdScore' ? aJd : sortConfig.key === 'skillsScore' ? aSkills : aOverall;
+          valB = sortConfig.key === 'jdScore' ? bJd : sortConfig.key === 'skillsScore' ? bSkills : bOverall;
         }
 
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -338,8 +359,13 @@ function CreatePageContent() {
         return 0;
       });
     }
-    return filtered;
-  }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig]);
+
+    // Update candidates with calculated scores
+    return filtered.map(candidate => ({
+      ...candidate,
+      ...calculateScores(candidate),
+    }));
+  }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig, confirmedParameters]);
 
   const handleExport = () => {
     if (filteredAndSortedCandidates.length === 0) {
@@ -562,13 +588,10 @@ function CreatePageContent() {
                         <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
                         <TableHead className="whitespace-nowrap">Phone</TableHead>
                         <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
-                        <TableHead className="whitespace-nowrap">Resume</TableHead>
-                        {confirmedParameters.map(param => (
-                          <TableHead key={param.id} onClick={() => handleSort(param.name)} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">
-                            {param.name} {getSortIcon(param.name)}
-                          </TableHead>
-                        ))}
-                        <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score {getSortIcon('overallScore')}</TableHead>
+                        <TableHead className="whitespace-nowrap">Resume Link</TableHead>
+                        <TableHead onClick={() => handleSort('jdScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
+                        <TableHead onClick={() => handleSort('skillsScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
+                        <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score (out of 100) {getSortIcon('overallScore')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -583,17 +606,14 @@ function CreatePageContent() {
                                 <LinkIcon className="h-4 w-4" /> View
                               </a>
                             </TableCell>
-                            {confirmedParameters.map(param => (
-                              <TableCell key={`${candidate.id}-${param.id}`} className="text-center">
-                                {candidate.skills[param.name] || 0}/10
-                              </TableCell>
-                            ))}
+                            <TableCell className="text-center">{candidate.jdScore}</TableCell>
+                            <TableCell className="text-center">{candidate.skillsScore}</TableCell>
                             <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5 + confirmedParameters.length} className="h-24 text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                             No candidates match your filters, or no skills confirmed for display.
                           </TableCell>
                         </TableRow>
