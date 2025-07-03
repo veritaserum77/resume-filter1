@@ -319,9 +319,7 @@ function CreatePageContent() {
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(lowerSearchTerm) ||
-        c.email.toLowerCase().includes(lowerSearchTerm) ||
-        c.phone.toLowerCase().includes(lowerSearchTerm)
+        c.resumeUrl?.toLowerCase().includes(lowerSearchTerm) // Only search resume URL now
       );
     }
 
@@ -344,10 +342,7 @@ function CreatePageContent() {
     if (sortConfig) {
       filtered.sort((a, b) => {
         let valA, valB;
-        if (sortConfig.key === 'name' || sortConfig.key === 'email') {
-          valA = a[sortConfig.key].toLowerCase();
-          valB = b[sortConfig.key].toLowerCase();
-        } else if (sortConfig.key === 'jdScore' || sortConfig.key === 'skillsScore' || sortConfig.key === 'overallScore') {
+        if (sortConfig.key === 'jdScore' || sortConfig.key === 'skillsScore' || sortConfig.key === 'overallScore') {
           const { jdScore: aJd, skillsScore: aSkills, overallScore: aOverall } = calculateScores(a);
           const { jdScore: bJd, skillsScore: bSkills, overallScore: bOverall } = calculateScores(b);
           valA = sortConfig.key === 'jdScore' ? aJd : sortConfig.key === 'skillsScore' ? aSkills : aOverall;
@@ -585,9 +580,6 @@ function CreatePageContent() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Name {getSortIcon('name')}</TableHead>
-                        <TableHead className="whitespace-nowrap">Phone</TableHead>
-                        <TableHead onClick={() => handleSort('email')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Email {getSortIcon('email')}</TableHead>
                         <TableHead className="whitespace-nowrap">Resume Link</TableHead>
                         <TableHead onClick={() => handleSort('jdScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
                         <TableHead onClick={() => handleSort('skillsScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
@@ -598,9 +590,6 @@ function CreatePageContent() {
                       {filteredAndSortedCandidates.length > 0 ? (
                         filteredAndSortedCandidates.map(candidate => (
                           <TableRow key={candidate.id} className="hover:bg-muted/20">
-                            <TableCell className="font-medium whitespace-nowrap">{candidate.name}</TableCell>
-                            <TableCell className="whitespace-nowrap">{candidate.phone}</TableCell>
-                            <TableCell className="whitespace-nowrap">{candidate.email}</TableCell>
                             <TableCell className="whitespace-nowrap">
                               <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                 <LinkIcon className="h-4 w-4" /> View
@@ -613,7 +602,7 @@ function CreatePageContent() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                          <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                             No candidates match your filters, or no skills confirmed for display.
                           </TableCell>
                         </TableRow>
