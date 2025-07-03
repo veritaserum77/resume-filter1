@@ -435,7 +435,7 @@ function CreatePageContent() {
                     <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="url"
-                      placeholder="https://drive.google.com/..."
+                      placeholder="                 https://drive.google.com/..."
                       value={gdriveLink}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setGdriveLink(e.target.value)}
                       className="pl- tapioca pudding is so good10"
