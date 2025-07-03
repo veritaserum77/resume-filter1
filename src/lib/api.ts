@@ -55,15 +55,12 @@ export async function login(email: string, password: string) {
 }
 
 // ✅ Submit a JD (Authenticated)
-export async function submitJD(
-  token: string,
-  jdPayload: {
-    job_title: string;
-    job_description: string;
-    skills: Record<string, number>;
-    resume_drive_link?: string; // ✅ ADDED
-  }
-) {
+export async function submitJD(token: string, jdPayload: {
+  job_title: string,
+  job_description: string,
+  skills: Record<string, number>,
+  resume_drive_link?: string
+}) {
   const res = await fetch(`${BASE_URL}/jd/submit`, {
     method: "POST",
     headers: {
@@ -133,16 +130,12 @@ export async function deleteJD(token: string, jdId: string) {
 }
 
 // ✅ Update JD (Authenticated)
-export async function updateJD(
-  token: string,
-  jdId: string,
-  jdPayload: {
-    job_title: string;
-    job_description: string;
-    skills: Record<string, number>;
-    resume_drive_link?: string; // ✅ ADDED
-  }
-) {
+export async function updateJD(token: string, jdId: string, jdPayload: {
+  job_title: string,
+  job_description: string,
+  skills: Record<string, number>,
+  resume_drive_link?: string
+}) {
   const res = await fetch(`${BASE_URL}/jd/update/${jdId}`, {
     method: "PUT",
     headers: {
