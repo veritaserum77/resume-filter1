@@ -237,9 +237,10 @@ function CreatePageContent() {
 
       router.push('/dashboard');
     } catch (error: any) {
+      console.error('Update JD failed:', error);
       toast({
         title: "Save Failed",
-        description: error.message || "Could not save shortlist.",
+        description: error.message || "Could not save shortlist. Check console for details.",
         variant: "destructive",
       });
     }
@@ -297,37 +298,18 @@ function CreatePageContent() {
     setSortConfig({ key, direction });
   };
 
-  // Calculate scores for each candidate
-  const calculateScores = (candidate: Candidate): { jdScore: number; skillsScore: number; overallScore: number } => {
-    // Assume jdScore is derived (e.g., based on resume match) or hardcoded for now; adjust based on your logic
-    const jdScore = candidate.overallScore ? Math.round((candidate.overallScore / 100) * 30) : 0;
-    // Calculate skillsScore based on confirmedParameters and candidate.skills
-    const totalWeight = confirmedParameters.reduce((sum, param) => sum + param.weight, 0);
-    const weightedSkillScore = confirmedParameters.reduce((sum, param) => {
-      const skillScore = candidate.skills[param.name] || 0;
-      return sum + (skillScore / 10) * param.weight; // Normalize skill score (0-10) to weight contribution
-    }, 0);
-    const skillsScore = totalWeight > 0 ? Math.round((weightedSkillScore / totalWeight) * 70) : 0;
-    const overallScore = jdScore + skillsScore;
-
-    return { jdScore, skillsScore, overallScore };
-  };
-
   const filteredAndSortedCandidates = useMemo(() => {
     let filtered = [...candidates];
 
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(c =>
-        c.resumeUrl?.toLowerCase().includes(lowerSearchTerm) // Only search resume URL now
+        c.resumeUrl?.toLowerCase().includes(lowerSearchTerm)
       );
     }
 
     if (overallScoreFilter !== '') {
-      filtered = filtered.filter(c => {
-        const { overallScore } = calculateScores(c);
-        return overallScore >= Number(overallScoreFilter);
-      });
+      filtered = filtered.filter(c => c.overallScore >= Number(overallScoreFilter));
     }
 
     skillFilters.forEach(filter => {
@@ -343,10 +325,8 @@ function CreatePageContent() {
       filtered.sort((a, b) => {
         let valA, valB;
         if (sortConfig.key === 'jdScore' || sortConfig.key === 'skillsScore' || sortConfig.key === 'overallScore') {
-          const { jdScore: aJd, skillsScore: aSkills, overallScore: aOverall } = calculateScores(a);
-          const { jdScore: bJd, skillsScore: bSkills, overallScore: bOverall } = calculateScores(b);
-          valA = sortConfig.key === 'jdScore' ? aJd : sortConfig.key === 'skillsScore' ? aSkills : aOverall;
-          valB = sortConfig.key === 'jdScore' ? bJd : sortConfig.key === 'skillsScore' ? bSkills : bOverall;
+          valA = a[sortConfig.key as keyof Candidate] as number;
+          valB = b[sortConfig.key as keyof Candidate] as number;
         }
 
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -355,12 +335,8 @@ function CreatePageContent() {
       });
     }
 
-    // Update candidates with calculated scores
-    return filtered.map(candidate => ({
-      ...candidate,
-      ...calculateScores(candidate),
-    }));
-  }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig, confirmedParameters]);
+    return filtered;
+  }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig]);
 
   const handleExport = () => {
     if (filteredAndSortedCandidates.length === 0) {
@@ -580,16 +556,19 @@ function CreatePageContent() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="whitespace-nowrap">Index</TableHead>
                         <TableHead className="whitespace-nowrap">Resume Link</TableHead>
                         <TableHead onClick={() => handleSort('jdScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
                         <TableHead onClick={() => handleSort('skillsScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
                         <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score (out of 100) {getSortIcon('overallScore')}</TableHead>
+                        <TableHead className="whitespace-nowrap">Reason</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredAndSortedCandidates.length > 0 ? (
-                        filteredAndSortedCandidates.map(candidate => (
+                        filteredAndSortedCandidates.map((candidate, index) => (
                           <TableRow key={candidate.id} className="hover:bg-muted/20">
+                            <TableCell className="text-center font-medium">{index + 1}</TableCell>
                             <TableCell className="whitespace-nowrap">
                               <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                 <LinkIcon className="h-4 w-4" /> View
@@ -598,11 +577,12 @@ function CreatePageContent() {
                             <TableCell className="text-center">{candidate.jdScore}</TableCell>
                             <TableCell className="text-center">{candidate.skillsScore}</TableCell>
                             <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
+                            <TableCell className="whitespace-normal">{candidate.reason || 'No reason provided'}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                             No candidates match your filters, or no skills confirmed for display.
                           </TableCell>
                         </TableRow>
