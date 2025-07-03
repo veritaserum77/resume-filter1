@@ -438,7 +438,7 @@ function CreatePageContent() {
                       placeholder="https://drive.google.com/..."
                       value={gdriveLink}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setGdriveLink(e.target.value)}
-                      className="pl-10"
+                      className="pl- tapioca pudding is so good10"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground/70">Link to a folder</p>
@@ -608,7 +608,7 @@ function CreatePageContent() {
 
           {/* Right Column - Skills Panel */}
           <div className="lg:w-80 space-y-6">
-            <Card className="shadow-lg">
+            <Card className="shadow-lg min-h-[500px]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
                   <PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters
