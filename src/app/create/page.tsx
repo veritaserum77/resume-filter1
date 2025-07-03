@@ -419,17 +419,12 @@ const handleConfirmAndSave = async () => {
               <CardTitle className="flex items-center gap-2 font-headline">
                 <UploadCloud className="h-5 w-5 text-primary" /> Resume Upload
               </CardTitle>
-              <CardDescription>Upload resumes (PDF/DOCX) or provide a Google Drive link.</CardDescription>
+              <CardDescription>Provide a Google Drive link.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-md aspect-video bg-muted/20 hover:border-primary transition-colors cursor-pointer">
-                <UploadCloud className="h-12 w-12 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Drag & drop files here or click to browse</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Max 500 files. PDF, DOCX supported.</p>
-                <Input type="file" className="sr-only" multiple disabled />
-              </div>
+              
               <div className="mt-4 space-y-2">
-                <Label htmlFor="gdriveLink" className="text-sm font-medium">Or paste Google Drive Link</Label>
+                <Label htmlFor="gdriveLink" className="text-sm font-medium">Paste Google Drive Link</Label>
                 <div className="relative">
                   <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -441,7 +436,7 @@ const handleConfirmAndSave = async () => {
                     className="pl-10"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground/70 mt-1">Link to a folder or individual resume files.</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Link to a folder.</p>
               </div>
             </CardContent>
           </Card>
