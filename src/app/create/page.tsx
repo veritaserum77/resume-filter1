@@ -212,10 +212,11 @@ function CreatePageContent() {
     }
 
     const jdPayload = {
-      job_title: jobTitle,
-      job_description: jobDescription,
-      skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
-    };
+  job_title: jobTitle,
+  job_description: jobDescription,
+  skills: Object.fromEntries(parameters.map(p => [p.name, p.weight])),
+  resume_drive_link: gdriveLink.trim() || undefined,
+};
 
     try {
       if (shortlistId) {
