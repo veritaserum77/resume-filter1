@@ -14,7 +14,7 @@ export async function signupInit(name: string, email: string, password: string) 
     const error = await safeParseError(res);
     throw new Error(error || "Signup failed");
   }
-  console.log(res);
+
   return res.json(); // { message: "...", etc }
 }
 
@@ -55,7 +55,15 @@ export async function login(email: string, password: string) {
 }
 
 // ✅ Submit a JD (Authenticated)
-export async function submitJD(token: string, jdPayload: { job_title: string, job_description: string, skills: Record<string, number> }) {
+export async function submitJD(
+  token: string,
+  jdPayload: {
+    job_title: string;
+    job_description: string;
+    skills: Record<string, number>;
+    resume_drive_link?: string; // ✅ ADDED
+  }
+) {
   const res = await fetch(`${BASE_URL}/jd/submit`, {
     method: "POST",
     headers: {
@@ -72,8 +80,6 @@ export async function submitJD(token: string, jdPayload: { job_title: string, jo
 
   return res.json(); // { message, jd_id }
 }
-
-
 
 // ✅ Fetch JD history (Authenticated)
 export async function getJDHistory(token: string) {
@@ -125,7 +131,18 @@ export async function deleteJD(token: string, jdId: string) {
 
   return res.json(); // { message: "JD deleted successfully" }
 }
-export async function updateJD(token: string, jdId: string, jdPayload: { job_title: string, job_description: string, skills: Record<string, number> }) {
+
+// ✅ Update JD (Authenticated)
+export async function updateJD(
+  token: string,
+  jdId: string,
+  jdPayload: {
+    job_title: string;
+    job_description: string;
+    skills: Record<string, number>;
+    resume_drive_link?: string; // ✅ ADDED
+  }
+) {
   const res = await fetch(`${BASE_URL}/jd/update/${jdId}`, {
     method: "PUT",
     headers: {
@@ -151,4 +168,4 @@ async function safeParseError(res: Response) {
   } catch {
     return res.statusText;
   }
-} 
+}
