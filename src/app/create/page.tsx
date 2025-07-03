@@ -23,7 +23,6 @@ import {
   Files,
   Search,
   CheckCircle,
-  LinkIcon,
   Sparkles,
   Loader2,
   ClipboardList,
@@ -432,13 +431,12 @@ function CreatePageContent() {
                 <div className="space-y-2">
                   <Label>Paste Google Drive Link</Label>
                   <div className="relative">
-                    <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="url"
-                      placeholder="                 https://drive.google.com/..."
+                      placeholder="https://drive.google.com/..."
                       value={gdriveLink}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setGdriveLink(e.target.value)}
-                      className="pl- tapioca pudding is so good10"
+                      className="w-full"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground/70">Link to a folder</p>
@@ -608,7 +606,7 @@ function CreatePageContent() {
 
           {/* Right Column - Skills Panel */}
           <div className="lg:w-80 space-y-6">
-            <Card className="shadow-lg min-h-[500px]">
+            <Card className="shadow-lg min-h-[400px]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
                   <PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters
