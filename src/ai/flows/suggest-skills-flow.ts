@@ -1,5 +1,5 @@
-
 'use server';
+
 /**
  * @fileOverview An AI flow to suggest skills based on a job description.
  *
@@ -10,6 +10,12 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+
+// Verify API key usage by logging its availability
+console.log('Verifying GEMINI_API_KEY in suggest-skills-flow.js:', {
+  isDefined: typeof process.env.GEMINI_API_KEY !== 'undefined',
+  value: process.env.GEMINI_API_KEY ? 'Set' : 'Not Set',
+});
 
 const SuggestSkillsInputSchema = z.object({
   jobDescription: z.string().describe('The full text of the job description.'),
@@ -24,6 +30,7 @@ const SuggestSkillsOutputSchema = z.object({
 export type SuggestSkillsOutput = z.infer<typeof SuggestSkillsOutputSchema>;
 
 export async function suggestSkills(input: SuggestSkillsInput): Promise<SuggestSkillsOutput> {
+  console.log('Executing suggestSkills with jobDescription:', input.jobDescription.substring(0, 50) + '...'); // Log first 50 chars
   return suggestSkillsFlow(input);
 }
 
@@ -60,7 +67,9 @@ const suggestSkillsFlow = ai.defineFlow(
     outputSchema: SuggestSkillsOutputSchema,
   },
   async (input) => {
+    console.log('Executing suggestSkillsFlow with input:', input.jobDescription.substring(0, 50) + '...');
     const { output } = await suggestSkillsPrompt(input);
+    console.log('suggestSkillsFlow output:', output);
     return output!;
   }
 );
