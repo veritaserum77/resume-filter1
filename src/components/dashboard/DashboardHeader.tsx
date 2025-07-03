@@ -32,12 +32,7 @@ export function DashboardHeader() {
           <span className="text-sm text-muted-foreground hidden sm:inline">
             {name ? `Welcome ${name}` : 'Welcome!'}
           </span>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="https://placehold.co/40x40.png" alt="User Avatar" />
-            <AvatarFallback>
-              <User className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
+          
           <Button variant="outline" size="sm" onClick={handleLogout}>
             Logout
           </Button>
