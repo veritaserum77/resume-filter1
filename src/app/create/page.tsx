@@ -73,6 +73,9 @@ function CreatePageContent() {
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
   const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
 
+  // Dialog state for candidate table
+  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
+
   // Load data on component mount
   useEffect(() => {
     const id = searchParams.get('id');
@@ -470,128 +473,12 @@ function CreatePageContent() {
               </Button>
             </div>
 
-            {/* Candidate Scores Card */}
-            <Card className="shadow-lg">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
-                <div className="flex-shrink-0">
-                  <CardTitle className="flex items-center gap-2 font-headline">
-                    <ClipboardList className="h-5 w-5 text-primary" />
-                    Candidate Scores
-                  </CardTitle>
-                  <CardDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</CardDescription>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <div className="relative flex-grow sm:flex-grow-0">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full sm:w-48 md:w-64"
-                    />
-                  </div>
-                  <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="flex-shrink-0">
-                        <Filter className="h-4 w-4" />
-                        <span className="sr-only">Open Filters</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 space-y-4" align="end">
-                      <div className="space-y-2">
-                        <h4 className="font-medium leading-none">Filters</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Adjust filters to refine candidate list.
-                        </p>
-                      </div>
-                      <div className="grid gap-4">
-                        <div>
-                          <Label htmlFor="overallScoreFilterPopover">Min. Overall Score (%)</Label>
-                          <Input
-                            id="overallScoreFilterPopover"
-                            type="number"
-                            min="0"
-                            max="100"
-                            placeholder="e.g., 80"
-                            value={overallScoreFilter}
-                            onChange={(e) => setOverallScoreFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                          />
-                        </div>
-                        {skillFilters.length > 0 && (
-                          <div className="space-y-2 pt-2 border-t">
-                            <Label className="font-medium">Min. Skill Scores (Active)</Label>
-                            <div className="grid grid-cols-1 gap-x-4 gap-y-2 max-h-48 overflow-y-auto">
-                              {skillFilters.map((filter, index) => (
-                                <div key={filter.skillName}>
-                                  <Label htmlFor={`skillFilterPopover-${filter.skillName}`} className="text-xs">{filter.skillName}</Label>
-                                  <Input
-                                    id={`skillFilterPopover-${filter.skillName}`}
-                                    type="number"
-                                    min="0"
-                                    max="10"
-                                    placeholder="e.g., 7"
-                                    value={filter.minScore}
-                                    onChange={(e) => {
-                                      const newFilters = [...skillFilters];
-                                      newFilters[index].minScore = e.target.value === '' ? '' : Number(e.target.value);
-                                      setSkillFilters(newFilters);
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <Button onClick={() => setIsFilterPopoverOpen(false)} className="w-full">Apply Filters</Button>
-                    </PopoverContent>
-                  </Popover>
-                  <Button onClick={handleExport} variant="outline" size="sm" className="flex-shrink-0">
-                    <Files className="mr-2 h-4 w-4" /> Export
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="whitespace-nowrap">Index</TableHead>
-                        <TableHead className="whitespace-nowrap">Resume Link</TableHead>
-                        <TableHead onClick={() => handleSort('jdScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
-                        <TableHead onClick={() => handleSort('skillsScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
-                        <TableHead onClick={() => handleSort('overallScore')} className="cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score (out of 100) {getSortIcon('overallScore')}</TableHead>
-                        <TableHead className="whitespace-nowrap">Reason</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAndSortedCandidates.length > 0 ? (
-                        filteredAndSortedCandidates.map((candidate, index) => (
-                          <TableRow key={candidate.id} className="hover:bg-muted/20">
-                            <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                <LinkIcon className="h-4 w-4" /> View
-                              </a>
-                            </TableCell>
-                            <TableCell className="text-center">{candidate.jdScore}</TableCell>
-                            <TableCell className="text-center">{candidate.skillsScore}</TableCell>
-                            <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
-                            <TableCell className="whitespace-normal">{candidate.reason || 'No reason provided'}</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                            No candidates match your filters, or no skills confirmed for display.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Button to View Candidate Table */}
+            <div className="flex justify-center my-6">
+              <Button onClick={() => setIsTableDialogOpen(true)} size="lg" className="w-full max-w-xs">
+                <ClipboardList className="mr-2 h-5 w-5" /> View Candidate Scores
+              </Button>
+            </div>
           </div>
 
           {/* Right Column - Skills Panel */}
@@ -650,6 +537,58 @@ function CreatePageContent() {
           </div>
         </div>
       </main>
+
+      {/* Dialog for Candidate Table */}
+      <Dialog open={isTableDialogOpen} onOpenChange={setIsTableDialogOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Candidate Scores</DialogTitle>
+            <DialogDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[10%] whitespace-nowrap">Index</TableHead>
+                  <TableHead className="w-[20%] whitespace-nowrap">Resume Link</TableHead>
+                  <TableHead onClick={() => handleSort('jdScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
+                  <TableHead onClick={() => handleSort('skillsScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
+                  <TableHead onClick={() => handleSort('overallScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score (out of 100) {getSortIcon('overallScore')}</TableHead>
+                  <TableHead className="w-[25%] whitespace-normal">Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedCandidates.length > 0 ? (
+                  filteredAndSortedCandidates.map((candidate, index) => (
+                    <TableRow key={candidate.id} className="hover:bg-muted/20">
+                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                          <LinkIcon className="h-4 w-4" /> View
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-center">{candidate.jdScore}</TableCell>
+                      <TableCell className="text-center">{candidate.skillsScore}</TableCell>
+                      <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
+                      <TableCell className="whitespace-normal break-words">{candidate.reason || 'No reason provided'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      No candidates match your filters, or no skills confirmed for display.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsTableDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <footer className="py-6 text-center text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} ResumeRank. Advanced Resume Screening.
       </footer>
