@@ -84,6 +84,10 @@ function CreatePageContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 5;
 
+  // Suggestion state
+  const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+
   const jdId = searchParams.get('id');
 
   // Filter and sort candidates
@@ -217,6 +221,7 @@ function CreatePageContent() {
     };
     setParameters([...parameters, newParam]);
     setNewParamName('');
+    setSuggestedSkills(suggestedSkills.filter(skill => skill !== newParamName)); // Remove from suggestions if added
     toast({ 
       title: "Skill Added", 
       description: `Skill "${newParam.name}" added with weight ${newParam.weight}.`, 
@@ -316,50 +321,39 @@ function CreatePageContent() {
     }
   };
 
-  const handleSuggestSkills = async () => {
+  const handleGenerateSuggestions = async () => {
     if (!jobDescription.trim()) {
-      toast({
-        title: "Job Description Required",
-        description: "Please paste a job description first.",
-        variant: "destructive",
-      });
+      toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
       return;
     }
-
+    setIsGeneratingSuggestions(true);
+    setSuggestedSkills([]);
     try {
       const result = await suggestSkills({ jobDescription });
-      if (result?.skills) {
-        const newSuggestions = result.skills.filter(
-          (skill) => !parameters.some((param) => param.name.toLowerCase() === skill.toLowerCase())
+      if (result && result.skills) {
+        const newSuggestions = result.skills.filter(suggestedSkill =>
+          !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
         );
+        setSuggestedSkills(newSuggestions);
         if (newSuggestions.length > 0) {
-          newSuggestions.forEach((skill) => {
-            if (!parameters.some((param) => param.name.toLowerCase() === skill.toLowerCase())) {
-              setNewParamName(skill);
-              handleAddParameter(); // Automatically add the first suggestion
-            }
-          });
-          toast({
-            title: "Suggestions Generated",
-            description: `${newSuggestions.length} new skill(s) suggested and added.`,
-            className: "bg-accent text-accent-foreground",
-          });
+          toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
+        } else if (result.skills.length > 0) {
+          toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
         } else {
-          toast({
-            title: "No New Suggestions",
-            description: "All suggested skills are already in your list.",
-            variant: "default",
-          });
+          toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
         }
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate skill suggestions. Please try again.",
-        variant: "destructive",
-      });
-      console.error("Suggest Skills Error:", error);
+      console.error("Failed to generate skill suggestions:", error);
+      toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
+    } finally {
+      setIsGeneratingSuggestions(false);
     }
+  };
+
+  const handleAddSuggestedSkill = (skill: string) => {
+    setNewParamName(skill);
+    handleAddParameter();
   };
 
   return (
@@ -524,13 +518,36 @@ function CreatePageContent() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Skill
                   </Button>
                   <Button 
-                    onClick={handleSuggestSkills} 
+                    onClick={handleGenerateSuggestions} 
                     variant="outline"
-                    disabled={!jobDescription.trim()}
+                    disabled={!jobDescription.trim() || isGeneratingSuggestions}
                   >
-                    <Sparkles className="mr-2 h-4 w-4" /> Suggest Skills
+                    {isGeneratingSuggestions ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Suggest Skills
                   </Button>
                 </div>
+                {suggestedSkills.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium">Suggested Skills:</p>
+                    {suggestedSkills.map((skill, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-secondary/30 rounded-md">
+                        <span className="flex-1">{skill}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleAddSuggestedSkill(skill)}
+                          disabled={parameters.some(param => param.name.toLowerCase() === skill.toLowerCase())}
+                        >
+                          <PlusCircle className="h-4 w-4 text-primary" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
