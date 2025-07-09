@@ -1,40 +1,58 @@
 'use client';
 
-import { useState, useMemo, useEffect, ChangeEvent, Suspense } from 'react';
-import type { Candidate, SkillParameter, Shortlist } from '@/lib/types';
-import { exportCandidatesToCSV } from '@/lib/csvExport';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { submitJD, updateJD } from '@/lib/api';
+import { fetchAIResults, submitJD, updateJD } from '@/lib/api';
+import { exportCandidatesToCSV } from '@/lib/csvExport';
 import { suggestSkills } from '@/ai/flows/suggest-skills-flow';
+
+import { useToast } from '@/hooks/use-toast';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Slider } from '@/components/ui/slider';
 import {
-  Trash2,
-  PlusCircle,
-  ArrowUpDown,
-  UploadCloud,
-  FileText,
-  Filter,
-  Files,
-  Search,
-  CheckCircle,
-  Sparkles,
-  Loader2,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ClipboardList,
-  ChevronUp,
-  ChevronDown,
+  FileText,
+  Loader2,
+  CheckCircle,
+  PlusCircle,
+  Trash2,
+  Search,
+  Sparkles,
 } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 
-const INITIAL_PARAMETERS: SkillParameter[] = [];
+interface SkillParameter {
+  id: string;
+  name: string;
+  weight: number;
+}
+
+interface Candidate {
+  name: string;
+  jd_score: number;
+  skills_score: number;
+  overall_score: number;
+  description: string;
+}
 
 function CreatePageContent() {
   const searchParams = useSearchParams();
@@ -43,40 +61,56 @@ function CreatePageContent() {
 
   const [shortlistId, setShortlistId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [tempId] = useState(() => `sl-${Date.now()}`);
+  const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
 
-  // Shortlist-specific state
+  // Shortlist details
   const [shortlistTitle, setShortlistTitle] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [gdriveLink, setGdriveLink] = useState('');
 
-  // Staged vs. Confirmed parameters
-  const [parameters, setParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
-  const [confirmedParameters, setConfirmedParameters] = useState<SkillParameter[]>(INITIAL_PARAMETERS);
-
-  // Staging new parameters
+  // Skills parameters
+  const [parameters, setParameters] = useState<SkillParameter[]>([]);
   const [newParamName, setNewParamName] = useState('');
-  const [newParamWeight, setNewParamWeight] = useState<number>(5);
+  const [newParamWeight, setNewParamWeight] = useState(5);
 
+  // Candidate results
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [aiResultsReady, setAIResultsReady] = useState(false);
+  const [isFetchingAI, setIsFetchingAI] = useState(false);
+  const [showCandidateTable, setShowCandidateTable] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scoreFilter, setScoreFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const itemsPerPage = 5;
 
-  // AI Suggestions
-  const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
-  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const jdId = searchParams.get('id');
 
-  // Table state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [overallScoreFilter, setOverallScoreFilter] = useState<number | ''>('');
-  const [skillFilters, setSkillFilters] = useState<Array<{ skillName: string; minScore: number | '' }>>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
-  const [isNewShortlistModalOpen, setIsNewShortlistModalOpen] = useState(false);
+  // Filter and sort candidates
+  const filteredCandidates = candidates
+    .filter((candidate) => {
+      const matchesSearch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
 
-  // Dialog state for candidate table
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
+      if (!scoreFilter) return true;
+      if (scoreFilter === '>90') return candidate.overall_score > 90;
+      if (scoreFilter === '>80') return candidate.overall_score > 80;
+      if (scoreFilter === '>70') return candidate.overall_score > 70;
+      if (scoreFilter === '<=60') return candidate.overall_score <= 60;
+      return true;
+    })
+    .sort((a, b) => {
+      // Explicit descending sort by overall_score
+      if (a.overall_score > b.overall_score) return -1;
+      if (a.overall_score < b.overall_score) return 1;
+      return 0;
+    });
 
-  // Load data on component mount
+  const paginatedCandidates = filteredCandidates.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   useEffect(() => {
     const id = searchParams.get('id');
     if (id) {
@@ -100,7 +134,7 @@ function CreatePageContent() {
 
   const fetchShortlistHistory = async (token: string, id: string) => {
     try {
-      const res = await fetch('https://backend-f2yv.onrender.com/jd/history', {
+      const res = await fetch('http://localhost:8000/jd/history', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -108,15 +142,9 @@ function CreatePageContent() {
         },
       });
 
-      if (!res.ok) {
-        throw new Error('Failed to fetch shortlist history');
-      }
+      if (!res.ok) throw new Error('Failed to fetch shortlist history');
 
       const data = await res.json();
-
-      console.log("Fetched history from backend:", data.history);
-      console.log("shortlistId from URL:", id);
-
       const selectedShortlist = data.history.find((s: any) => s.jd_id === id);
 
       if (selectedShortlist) {
@@ -124,14 +152,22 @@ function CreatePageContent() {
         setJobTitle(selectedShortlist.job_title || '');
         setJobDescription(selectedShortlist.job_description || '');
 
-        const params: SkillParameter[] = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
+        const params = Object.entries(selectedShortlist.skills || {}).map(([name, weight]) => ({
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           name,
-          weight: typeof weight === 'object' && '$numberInt' in weight ? parseInt(weight.$numberInt) : (weight as number),
+          weight: typeof weight === 'object' && '$numberInt' in weight ? 
+            parseInt(weight.$numberInt) : 
+            (weight as number),
         }));
         setParameters(params);
-        setConfirmedParameters(params);
-        setCandidates(selectedShortlist.candidates || []);
+        
+        // Ensure candidates are sorted when loaded
+        const sortedCandidates = (selectedShortlist.candidates || []).sort((a: Candidate, b: Candidate) => 
+          b.overall_score - a.overall_score
+        );
+        setCandidates(sortedCandidates);
+        
+        setAIResultsReady(true);
       } else {
         throw new Error('Shortlist not found');
       }
@@ -145,25 +181,13 @@ function CreatePageContent() {
     }
   };
 
-  // Update skill filters when confirmed parameters change
-  useEffect(() => {
-    if (!isLoaded) return;
-    setSkillFilters(prevFilters => {
-      const confirmedSkillNames = new Set(confirmedParameters.map(p => p.name));
-      const existingFiltersMap = new Map(prevFilters.map(f => [f.skillName, f.minScore]));
-
-      const updatedFilters = confirmedParameters.map(p => ({
-        skillName: p.name,
-        minScore: existingFiltersMap.get(p.name) ?? '',
-      }));
-
-      return updatedFilters.filter(f => confirmedSkillNames.has(f.skillName));
-    });
-  }, [confirmedParameters, isLoaded]);
-
   const handleSetDetails = () => {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
-      toast({ title: "Details Required", description: "Please provide both a Shortlist Title and a Job Title to continue.", variant: "destructive" });
+      toast({ 
+        title: "Details Required", 
+        description: "Please provide both a Shortlist Title and a Job Title to continue.", 
+        variant: "destructive" 
+      });
       return;
     }
     setIsNewShortlistModalOpen(false);
@@ -171,24 +195,72 @@ function CreatePageContent() {
 
   const handleAddParameter = () => {
     if (newParamName.trim() === '') {
-      toast({ title: "Error", description: "Skill name cannot be empty.", variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: "Skill name cannot be empty.", 
+        variant: "destructive" 
+      });
       return;
     }
-    if (parameters.find(p => p.name.toLowerCase() === newParamName.toLowerCase())) {
-      toast({ title: "Error", description: "Skill already exists in the staged list.", variant: "destructive" });
+    if (parameters.some(p => p.name.toLowerCase() === newParamName.toLowerCase())) {
+      toast({ 
+        title: "Error", 
+        description: "Skill already exists in the list.", 
+        variant: "destructive" 
+      });
       return;
     }
-    setParameters([...parameters, { id: Date.now().toString(), name: newParamName, weight: newParamWeight }]);
+    const newParam = { 
+      id: Date.now().toString(), 
+      name: newParamName.trim(), 
+      weight: newParamWeight 
+    };
+    setParameters([...parameters, newParam]);
     setNewParamName('');
-    setNewParamWeight(5);
-    toast({ title: "Skill Staged", description: `Skill "${newParamName}" staged. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
+    toast({ 
+      title: "Skill Added", 
+      description: `Skill "${newParam.name}" added with weight ${newParam.weight}.`, 
+      className: "bg-accent text-accent-foreground" 
+    });
   };
 
   const handleRemoveParameter = (id: string) => {
     const removedParam = parameters.find(p => p.id === id);
+    if (!removedParam) return;
+    
     setParameters(parameters.filter(p => p.id !== id));
-    if (removedParam) {
-      toast({ title: "Skill Staged for Removal", description: `Skill "${removedParam.name}" staged for removal. Press 'Confirm & Save' to apply.`, className: "bg-accent text-accent-foreground" });
+    toast({ 
+      title: "Skill Removed", 
+      description: `Skill "${removedParam.name}" was removed.`, 
+      className: "bg-accent text-accent-foreground" 
+    });
+  };
+
+  const handleFetchAIResults = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !jdId) return;
+
+    setIsFetchingAI(true);
+    try {
+      const res = await fetchAIResults(token, jdId);
+      if (res?.results) {
+        // Sort results immediately when received
+        const sortedResults = res.results.sort((a: Candidate, b: Candidate) => 
+          b.overall_score - a.overall_score
+        );
+        setCandidates(sortedResults);
+        setShowCandidateTable(true);
+        setCurrentPage(1);
+        toast({ title: "AI Results Loaded", description: "Candidate scores updated." });
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to Fetch Results",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingAI(false);
     }
   };
 
@@ -196,19 +268,17 @@ function CreatePageContent() {
     if (!shortlistTitle.trim() || !jobTitle.trim()) {
       toast({
         title: "Name Required",
-        description: "Please provide a Shortlist Title and Job Title before saving.",
+        description: "Please provide both a Shortlist Title and Job Title.",
         variant: "destructive",
       });
       return;
     }
 
-    setConfirmedParameters([...parameters]);
-
     const token = localStorage.getItem('token');
     if (!token) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to save the shortlist to the database.",
+        description: "Please log in to continue.",
         variant: "destructive",
       });
       return;
@@ -225,139 +295,71 @@ function CreatePageContent() {
       if (shortlistId) {
         await updateJD(token, shortlistId, jdPayload);
         toast({
-          title: "Updated Successfully",
-          description: `Shortlist "${shortlistTitle}" updated in database.`,
+          title: "JD Updated",
           className: "bg-accent text-accent-foreground",
         });
       } else {
-        await submitJD(token, jdPayload);
+        const res = await submitJD(token, jdPayload);
+        setShortlistId(res.jd_id);
         toast({
-          title: "Submitted Successfully",
-          description: `Shortlist "${shortlistTitle}" saved to database.`,
+          title: "JD Submitted",
           className: "bg-accent text-accent-foreground",
         });
       }
-
-      router.push('/dashboard');
+      setAIResultsReady(true);
     } catch (error: any) {
-      console.error('Update JD failed:', error);
       toast({
-        title: "Save Failed",
-        description: error.message || "Could not save shortlist. Check console for details.",
+        title: "Error",
+        description: error.message || "An error occurred during JD submission.",
         variant: "destructive",
       });
     }
   };
 
-  const handleGenerateSuggestions = async () => {
+  const handleSuggestSkills = async () => {
     if (!jobDescription.trim()) {
-      toast({ title: "Job Description Required", description: "Please paste a job description first.", variant: "destructive" });
+      toast({
+        title: "Job Description Required",
+        description: "Please paste a job description first.",
+        variant: "destructive",
+      });
       return;
     }
-    setIsGeneratingSuggestions(true);
-    setSuggestedSkills([]);
+
     try {
       const result = await suggestSkills({ jobDescription });
-      if (result && result.skills) {
-        const newSuggestions = result.skills.filter(suggestedSkill =>
-          !parameters.some(param => param.name.toLowerCase() === suggestedSkill.toLowerCase())
+      if (result?.skills) {
+        const newSuggestions = result.skills.filter(
+          (skill) => !parameters.some((param) => param.name.toLowerCase() === skill.toLowerCase())
         );
-        setSuggestedSkills(newSuggestions);
         if (newSuggestions.length > 0) {
-          toast({ title: "Suggestions Ready", description: "AI has generated skill suggestions for you below.", className: "bg-accent text-accent-foreground" });
-        } else if (result.skills.length > 0) {
-          toast({ title: "Suggestions Ready", description: "All suggested skills are already in your parameters list.", className: "bg-accent text-accent-foreground" });
+          newSuggestions.forEach((skill) => {
+            if (!parameters.some((param) => param.name.toLowerCase() === skill.toLowerCase())) {
+              setNewParamName(skill);
+              handleAddParameter(); // Automatically add the first suggestion
+            }
+          });
+          toast({
+            title: "Suggestions Generated",
+            description: `${newSuggestions.length} new skill(s) suggested and added.`,
+            className: "bg-accent text-accent-foreground",
+          });
         } else {
-          toast({ title: "No New Suggestions", description: "The AI could not generate new skill suggestions.", variant: "default" });
+          toast({
+            title: "No New Suggestions",
+            description: "All suggested skills are already in your list.",
+            variant: "default",
+          });
         }
       }
     } catch (error) {
-      console.error("Failed to generate skill suggestions:", error);
-      toast({ title: "Generation Failed", description: "An error occurred while generating suggestions. Please try again.", variant: "destructive" });
-    } finally {
-      setIsGeneratingSuggestions(false);
-    }
-  };
-
-  const handleAddSuggestedSkill = (skillName: string) => {
-    if (parameters.find(p => p.name.toLowerCase() === skillName.toLowerCase())) {
-      toast({ title: "Skill Exists", description: `"${skillName}" is already in your staged parameters.`, variant: "default" });
-      return;
-    }
-    setNewParamName(skillName);
-    setSuggestedSkills(prev => prev.filter(s => s !== skillName));
-    toast({
-      title: "Skill Selected",
-      description: `"${skillName}" is loaded. Adjust its weight and click 'Add Skill' to stage it.`,
-      className: "bg-accent text-accent-foreground"
-    });
-  };
-
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const filteredAndSortedCandidates = useMemo(() => {
-    let filtered = [...candidates];
-
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.resumeUrl?.toLowerCase().includes(lowerSearchTerm)
-      );
-    }
-
-    if (overallScoreFilter !== '') {
-      filtered = filtered.filter(c => c.overallScore >= Number(overallScoreFilter));
-    }
-
-    skillFilters.forEach(filter => {
-      if (filter.minScore !== '') {
-        filtered = filtered.filter(c => {
-          const skillScore = c.skills[filter.skillName] || 0;
-          return skillScore >= Number(filter.minScore);
-        });
-      }
-    });
-
-    if (sortConfig) {
-      filtered.sort((a, b) => {
-        let valA, valB;
-        if (sortConfig.key === 'jdScore' || sortConfig.key === 'skillsScore' || sortConfig.key === 'overallScore') {
-          valA = a[sortConfig.key as keyof Candidate] as number;
-          valB = b[sortConfig.key as keyof Candidate] as number;
-        }
-
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
+      toast({
+        title: "Error",
+        description: "Failed to generate skill suggestions. Please try again.",
+        variant: "destructive",
       });
+      console.error("Suggest Skills Error:", error);
     }
-
-    return filtered;
-  }, [candidates, searchTerm, overallScoreFilter, skillFilters, sortConfig]);
-
-  const handleExport = () => {
-    if (filteredAndSortedCandidates.length === 0) {
-      toast({ title: "No Data", description: "No data to export.", variant: "destructive" });
-      return;
-    }
-    exportCandidatesToCSV(filteredAndSortedCandidates, confirmedParameters, 'resumerank_export.csv');
-    toast({ title: "Export Started", description: "Your CSV export has started.", className: "bg-accent text-accent-foreground" });
-  };
-
-  const getSortIcon = (key: string) => {
-    if (!sortConfig || sortConfig.key !== key) {
-      return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/70" />;
-    }
-    if (sortConfig.direction === 'asc') {
-      return <ChevronUp className="ml-2 h-4 w-4" />;
-    }
-    return <ChevronDown className="ml-2 h-4 w-4" />;
   };
 
   return (
@@ -365,10 +367,8 @@ function CreatePageContent() {
       <DashboardHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8">
         <Dialog open={isNewShortlistModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            if (!shortlistId) {
-              router.push('/dashboard');
-            }
+          if (!open && !shortlistId) {
+            router.push('/dashboard');
           }
         }}>
           <DialogContent>
@@ -408,7 +408,7 @@ function CreatePageContent() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Main Content */}
           <div className="flex-1 space-y-8">
-            {/* Combined Resume Upload and Job Description Card */}
+            {/* Job Details Card */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
@@ -417,7 +417,6 @@ function CreatePageContent() {
                 <CardDescription>Paste the full job description and provide a Google Drive link for resumes.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                {/* Job Description Section */}
                 <div className="space-y-2">
                   <Label>Job Description</Label>
                   <Textarea
@@ -427,56 +426,43 @@ function CreatePageContent() {
                     className="min-h-[200px]"
                   />
                 </div>
-
-                {/* Resume Upload Section */}
                 <div className="space-y-2">
                   <Label>Paste Google Drive Link</Label>
-                  <div className="relative">
-                    <Input
-                      type="url"
-                      placeholder="https://drive.google.com/..."
-                      value={gdriveLink}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setGdriveLink(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground/70">Link to a folder</p>
+                  <Input
+                    type="url"
+                    placeholder="https://drive.google.com/..."
+                    value={gdriveLink}
+                    onChange={(e) => setGdriveLink(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground/70">Link to a folder containing resumes</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* AI Suggestions Card */}
-            {suggestedSkills.length > 0 && (
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-headline">
-                    <Sparkles className="h-5 w-5 text-primary" /> AI Skill Suggestions
-                  </CardTitle>
-                  <CardDescription>Click a skill to load it into the form above. You can then adjust its weight before adding.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedSkills.map((skill, index) => (
-                      <Button key={index} variant="secondary" onClick={() => handleAddSuggestedSkill(skill)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> {skill}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Confirm & Save Button */}
             <div className="flex justify-center my-6">
-              <Button onClick={handleConfirmAndSave} size="lg" className="w-full max-w-xs">
+              <Button 
+                onClick={handleConfirmAndSave} 
+                size="lg" 
+                className="w-full max-w-xs"
+              >
                 <CheckCircle className="mr-2 h-5 w-5" /> Confirm & Save Shortlist
               </Button>
             </div>
 
             {/* Button to View Candidate Table */}
             <div className="flex justify-center my-6">
-              <Button onClick={() => setIsTableDialogOpen(true)} size="lg" className="w-full max-w-xs">
-                <ClipboardList className="mr-2 h-5 w-5" /> View Candidate Scores
+              <Button
+                onClick={handleFetchAIResults}
+                disabled={!aiResultsReady}
+                className="w-full max-w-xs bg-primary text-white"
+              >
+                {isFetchingAI ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                )}
+                View Candidate Scores
               </Button>
             </div>
           </div>
@@ -486,26 +472,38 @@ function CreatePageContent() {
             <Card className="shadow-lg min-h-[400px]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
-                  <PlusCircle className="h-5 w-5 text-primary" /> Custom Parameters
+                  <PlusCircle className="h-5 w-5 text-primary" /> Skills Parameters
                 </CardTitle>
-                <CardDescription>Define skills and their importance (1-10). Confirm to apply and save.</CardDescription>
+                <CardDescription>Define skills and their importance (1-10).</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {parameters.map((param) => (
-                  <div key={param.id} className="flex items-center gap-2 p-2 border rounded-md bg-secondary/30">
-                    <span className="flex-1 font-medium">{param.name}</span>
-                    <span className="text-sm text-muted-foreground">Weight: {param.weight}</span>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveParameter(param.id)} aria-label={`Remove ${param.name}`}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                {parameters.length > 0 ? (
+                  parameters.map((param) => (
+                    <div key={param.id} className="flex items-center gap-2 p-2 border rounded-md bg-secondary/30">
+                      <span className="flex-1 font-medium">{param.name}</span>
+                      <span className="text-sm text-muted-foreground">Weight: {param.weight}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleRemoveParameter(param.id)} 
+                        aria-label={`Remove ${param.name}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No skills added yet
                   </div>
-                ))}
+                )}
                 <div className="space-y-3 pt-4 border-t">
                   <Input
                     type="text"
                     placeholder="New Skill Name (e.g., JavaScript)"
                     value={newParamName}
                     onChange={(e) => setNewParamName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddParameter()}
                   />
                   <div className="space-y-1">
                     <Label htmlFor="newParamWeight" className="text-xs">Weight: {newParamWeight}</Label>
@@ -518,19 +516,20 @@ function CreatePageContent() {
                       onValueChange={(value) => setNewParamWeight(value[0])}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleAddParameter} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add Skill
-                    </Button>
-                    <Button onClick={handleGenerateSuggestions} disabled={isGeneratingSuggestions || !jobDescription.trim()} variant="outline">
-                      {isGeneratingSuggestions ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      Suggest
-                    </Button>
-                  </div>
+                  <Button 
+                    onClick={handleAddParameter} 
+                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                    disabled={!newParamName.trim()}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Skill
+                  </Button>
+                  <Button 
+                    onClick={handleSuggestSkills} 
+                    variant="outline"
+                    disabled={!jobDescription.trim()}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" /> Suggest Skills
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -539,52 +538,150 @@ function CreatePageContent() {
       </main>
 
       {/* Dialog for Candidate Table */}
-      <Dialog open={isTableDialogOpen} onOpenChange={setIsTableDialogOpen}>
+      <Dialog open={showCandidateTable} onOpenChange={setShowCandidateTable}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Candidate Scores</DialogTitle>
-            <DialogDescription>Found {filteredAndSortedCandidates.length} candidate(s). Table reflects confirmed skills.</DialogDescription>
+            <DialogDescription>
+              View AI-ranked candidate scores based on your uploaded resumes.
+            </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-col gap-4 mb-4">
+            {/* Search Bar */}
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="max-w-sm"
+              />
+            </div>
+            {/* Score Filters - Updated as requested */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={scoreFilter === null ? 'default' : 'outline'}
+                onClick={() => {
+                  setScoreFilter(null);
+                  setCurrentPage(1);
+                }}
+              >
+                All
+              </Button>
+              <Button
+                variant={scoreFilter === '>90' ? 'default' : 'outline'}
+                onClick={() => {
+                  setScoreFilter('>90');
+                  setCurrentPage(1);
+                }}
+              >
+                Score > 90
+              </Button>
+              <Button
+                variant={scoreFilter === '>80' ? 'default' : 'outline'}
+                onClick={() => {
+                  setScoreFilter('>80');
+                  setCurrentPage(1);
+                }}
+              >
+                Score > 80
+              </Button>
+              <Button
+                variant={scoreFilter === '>70' ? 'default' : 'outline'}
+                onClick={() => {
+                  setScoreFilter('>70');
+                  setCurrentPage(1);
+                }}
+              >
+                Score > 70
+              </Button>
+              <Button
+                variant={scoreFilter === '<=60' ? 'default' : 'outline'}
+                onClick={() => {
+                  setScoreFilter('<=60');
+                  setCurrentPage(1);
+                }}
+              >
+                Score ≤ 60
+              </Button>
+            </div>
+            {/* Export Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => exportCandidatesToCSV(filteredCandidates, parameters)}
+                variant="outline"
+                disabled={filteredCandidates.length === 0}
+              >
+                Export CSV
+              </Button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[10%] whitespace-nowrap">Index</TableHead>
-                  <TableHead className="w-[20%] whitespace-nowrap">Resume Link</TableHead>
-                  <TableHead onClick={() => handleSort('jdScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">JD Score (out of 30) {getSortIcon('jdScore')}</TableHead>
-                  <TableHead onClick={() => handleSort('skillsScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">Skills Score (out of 70) {getSortIcon('skillsScore')}</TableHead>
-                  <TableHead onClick={() => handleSort('overallScore')} className="w-[15%] cursor-pointer hover:bg-muted/50 whitespace-nowrap">Overall Score (out of 100) {getSortIcon('overallScore')}</TableHead>
-                  <TableHead className="w-[25%] whitespace-normal">Reason</TableHead>
+                  <TableHead className="w-[10%] whitespace-nowrap">Rank</TableHead>
+                  <TableHead className="w-[20%] whitespace-nowrap">Name</TableHead>
+                  <TableHead className="w-[15%] whitespace-nowrap">JD Score (30)</TableHead>
+                  <TableHead className="w-[15%] whitespace-nowrap">Skills Score (70)</TableHead>
+                  <TableHead className="w-[15%] whitespace-nowrap">Overall (100)</TableHead>
+                  <TableHead className="w-[25%] whitespace-normal">Summary</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedCandidates.length > 0 ? (
-                  filteredAndSortedCandidates.map((candidate, index) => (
-                    <TableRow key={candidate.id} className="hover:bg-muted/20">
-                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                          <LinkIcon className="h-4 w-4" /> View
-                        </a>
-                      </TableCell>
-                      <TableCell className="text-center">{candidate.jdScore}</TableCell>
-                      <TableCell className="text-center">{candidate.skillsScore}</TableCell>
-                      <TableCell className="text-center font-semibold text-primary">{candidate.overallScore}%</TableCell>
-                      <TableCell className="whitespace-normal break-words">{candidate.reason || 'No reason provided'}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+                {paginatedCandidates.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      No candidates match your filters, or no skills confirmed for display.
+                    <TableCell colSpan={6} className="text-center py-8 text-muted">
+                      No candidates found.
                     </TableCell>
                   </TableRow>
+                ) : (
+                  paginatedCandidates.map((candidate, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                      <TableCell>{candidate.name}</TableCell>
+                      <TableCell>{(candidate.jd_score * 30).toFixed(2)}</TableCell>
+                      <TableCell>{candidate.skills_score.toFixed(2)}</TableCell>
+                      <TableCell className="font-semibold text-primary">
+                        {candidate.overall_score.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="whitespace-normal break-words">
+                        {candidate.description || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCurrentPage((p) =>
+                  p * itemsPerPage < filteredCandidates.length ? p + 1 : p
+                )
+              }
+              disabled={currentPage * itemsPerPage >= filteredCandidates.length}
+            >
+              Next
+            </Button>
+          </div>
+
           <DialogFooter>
-            <Button onClick={() => setIsTableDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setShowCandidateTable(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
