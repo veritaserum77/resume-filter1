@@ -221,7 +221,6 @@ function CreatePageContent() {
     };
     setParameters([...parameters, newParam]);
     setNewParamName('');
-    setSuggestedSkills(suggestedSkills.filter(skill => skill !== newParamName)); // Remove from suggestions if added
     toast({ 
       title: "Skill Added", 
       description: `Skill "${newParam.name}" added with weight ${newParam.weight}.`, 
@@ -352,8 +351,7 @@ function CreatePageContent() {
   };
 
   const handleAddSuggestedSkill = (skill: string) => {
-    setNewParamName(skill);
-    handleAddParameter();
+    setNewParamName(skill); // Set the suggested skill to newParamName for manual weight adjustment
   };
 
   return (
@@ -530,26 +528,33 @@ function CreatePageContent() {
                     Suggest Skills
                   </Button>
                 </div>
-                {suggestedSkills.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Suggested Skills:</p>
-                    {suggestedSkills.map((skill, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-secondary/30 rounded-md">
-                        <span className="flex-1">{skill}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAddSuggestedSkill(skill)}
-                          disabled={parameters.some(param => param.name.toLowerCase() === skill.toLowerCase())}
-                        >
-                          <PlusCircle className="h-4 w-4 text-primary" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
+            {suggestedSkills.length > 0 && (
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-headline">
+                    <Sparkles className="h-5 w-5 text-primary" /> Suggested Skills
+                  </CardTitle>
+                  <CardDescription>Click a skill to add it to the input above for manual weight assignment.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {suggestedSkills.map((skill, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-secondary/30 rounded-md">
+                      <span className="flex-1">{skill}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddSuggestedSkill(skill)}
+                        disabled={parameters.some(param => param.name.toLowerCase() === skill.toLowerCase())}
+                      >
+                        <PlusCircle className="h-4 w-4 text-primary" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </main>
