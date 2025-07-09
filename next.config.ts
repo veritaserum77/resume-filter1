@@ -1,11 +1,11 @@
 // next.config.js
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+module.exports = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // Changed to false; resolve errors instead of ignoring them
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false, // Changed to false; fix ESLint issues during builds
   },
   images: {
     remotePatterns: [
@@ -18,11 +18,16 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverActions: true,
+    serverActions: { bodyParser: true }, // Updated to object format as required
   },
   env: {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  }
+  },
 };
 
+module.exports = {
+  experimental: {
+    serverActions: true, // Should be a boolean within an object
+  },
+};
 module.exports = nextConfig;
