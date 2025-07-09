@@ -1,11 +1,9 @@
-// next.config.js
-/** @type {import('next').NextConfig} */
-module.exports = {
+export default {
   typescript: {
-    ignoreBuildErrors: false, // Changed to false; resolve errors instead of ignoring them
+    ignoreBuildErrors: false, // Resolve errors instead of ignoring them
   },
   eslint: {
-    ignoreDuringBuilds: false, // Changed to false; fix ESLint issues during builds
+    ignoreDuringBuilds: false, // Fix ESLint issues during builds
   },
   images: {
     remotePatterns: [
@@ -18,16 +16,9 @@ module.exports = {
     ],
   },
   experimental: {
-    serverActions: { bodyParser: true }, // Updated to object format as required
+    serverActions: { bodyParser: true }, // Proper object format
   },
   env: {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   },
 };
-
-module.exports = {
-  experimental: {
-    serverActions: true, // Should be a boolean within an object
-  },
-};
-module.exports = nextConfig;
