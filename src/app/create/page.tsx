@@ -1,3 +1,5 @@
+import React from 'react'; // Explicitly added to ensure JSX recognition
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -269,7 +271,7 @@ function CreatePageContent() {
   };
 
   const handleConfirmAndSave = async () => {
-    if (!shortlistTitle.trim() || !jobTitle.trim()) {
+    if (!shortlistId || !jobTitle.trim()) {
       toast({
         title: "Name Required",
         description: "Please provide both a Shortlist Title and Job Title.",
@@ -552,7 +554,7 @@ function CreatePageContent() {
                       </Button>
                     </div>
                   ))}
-                </div>
+                </CardContent>
               </Card>
             )}
           </div>
