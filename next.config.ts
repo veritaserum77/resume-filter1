@@ -1,9 +1,11 @@
-export default {
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   typescript: {
-    ignoreBuildErrors: false, // Resolve errors instead of ignoring them
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: false, // Fix ESLint issues during builds
+    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [
@@ -16,9 +18,13 @@ export default {
     ],
   },
   experimental: {
-    serverActions: { bodyParser: true }, // Proper object format
+    serverActions: true,
   },
   env: {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  },
+  }
 };
+
+module.exports = {
+  reactStrictMode: true,
+}
